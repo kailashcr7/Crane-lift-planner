@@ -3,157 +3,192 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="theme-color" content="#144170">
-<title>Lift planner – Sennebogen cranes</title>
+<meta name="theme-color" content="#fbfbf9">
+<title>Lift plan – Sennebogen cranes</title>
 <style>
-@font-face{font-family:'Barlow';font-style:normal;font-weight:400;font-display:swap;src:url(fonts/Barlow-400.woff2) format('woff2')}
-@font-face{font-family:'Barlow';font-style:normal;font-weight:500;font-display:swap;src:url(fonts/Barlow-500.woff2) format('woff2')}
-@font-face{font-family:'Barlow';font-style:normal;font-weight:600 700;font-display:swap;src:url(fonts/Barlow-700.woff2) format('woff2')}
-@font-face{font-family:'Barlow Condensed';font-style:normal;font-weight:400;font-display:swap;src:url(fonts/BarlowCondensed-400.woff2) format('woff2')}
-@font-face{font-family:'Barlow Condensed';font-style:normal;font-weight:600;font-display:swap;src:url(fonts/BarlowCondensed-600.woff2) format('woff2')}
-/* ── Industry system tokens (same as index.html) ── */
+@font-face{font-family:'IBM Plex Serif';font-style:normal;font-weight:400;font-display:swap;src:url(fonts/IBMPlexSerif-Regular.woff2) format('woff2')}
+@font-face{font-family:'IBM Plex Serif';font-style:normal;font-weight:600;font-display:swap;src:url(fonts/IBMPlexSerif-SemiBold.woff2) format('woff2')}
+@font-face{font-family:'IBM Plex Sans';font-style:normal;font-weight:400;font-display:swap;src:url(fonts/IBMPlexSans-Regular.woff2) format('woff2')}
+@font-face{font-family:'IBM Plex Sans';font-style:normal;font-weight:500;font-display:swap;src:url(fonts/IBMPlexSans-Medium.woff2) format('woff2')}
+@font-face{font-family:'IBM Plex Sans';font-style:normal;font-weight:600;font-display:swap;src:url(fonts/IBMPlexSans-SemiBold.woff2) format('woff2')}
+@font-face{font-family:'IBM Plex Mono';font-style:normal;font-weight:400;font-display:swap;src:url(fonts/IBMPlexMono-Regular.woff2) format('woff2')}
+@font-face{font-family:'IBM Plex Mono';font-style:normal;font-weight:500;font-display:swap;src:url(fonts/IBMPlexMono-Medium.woff2) format('woff2')}
+/* ── Engineering-document tokens: paper, navy ink, fine rules ── */
 :root{
-  --bg:#f2f2f3;--surface:#e9e9ea;--ink:#1d1f20;--muted:#5d5d60;--muted-2:#7a7a7d;
-  --line:rgba(29,31,32,.16);--line-soft:rgba(29,31,32,.08);
-  --accent:#5980a6;--accent-600:#597ea3;--accent-700:#416180;--accent-800:#2c455d;--accent-900:#144170;
-  --accent-100:#eef6ff;--accent-200:#d6ebff;--accent-300:#b5d9fd;
-  --n200:#e7e7ea;--n300:#d4d4d7;--warn:#a8502a;--warn-soft:#f6e6de;--ok:#2f6f55;--ok-soft:#dfeee6;
-  --sans:"Barlow","Segoe UI",Roboto,Helvetica,Arial,sans-serif;
-  --cond:"Barlow Condensed","Barlow","Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  --paper:#fbfbf9;--paper-2:#f4f5f2;--white:#fff;--ink:#15181c;--navy:#0b1f3a;--navy-2:#35506f;
+  --muted:#5a6270;--muted-2:#7c8696;
+  --rule:#15181c;--rule-soft:#cfd5dd;--rule-faint:#e6eaef;
+  --fill:#eef1f5;--blue:#dfe7f0;
+  --red:#b3261e;--red-soft:#f8e5e3;--green:#1f6b4a;--green-soft:#e1efe7;--amber:#8a5a00;--amber-soft:#f7ecd2;
+  --serif:"IBM Plex Serif",Georgia,"Times New Roman",serif;
+  --sans:"IBM Plex Sans","Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;
+  --grid:rgba(11,31,58,.05);
   box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);
 }
-@media (prefers-color-scheme:dark){:root{
-  --bg:#1d1f20;--surface:#2b2b2d;--ink:#f2f2f3;--muted:#b7b7ba;--muted-2:#98989b;
-  --line:rgba(242,242,243,.2);--line-soft:rgba(242,242,243,.1);
-  --accent:#94bce3;--accent-600:#b5d9fd;--accent-700:#b5d9fd;--accent-800:#d6ebff;--accent-900:#2c455d;
-  --accent-100:#2c455d;--accent-200:#2c455d;--accent-300:#416180;--n200:#424244;--n300:#5d5d60;
-  --warn:#e08a63;--warn-soft:#4a2a1c;--ok:#7fbf9f;--ok-soft:#1f3a2e}}
 *,*::before,*::after{box-sizing:inherit}
 html,body{margin:0}
-body{background:var(--bg);color:var(--ink);font:400 15px/1.5 var(--sans);-webkit-text-size-adjust:100%}
+body{background-color:var(--paper);background-image:linear-gradient(var(--grid) 1px,transparent 1px),linear-gradient(90deg,var(--grid) 1px,transparent 1px);background-size:24px 24px;
+  color:var(--ink);font:400 15px/1.5 var(--sans);-webkit-text-size-adjust:100%;font-variant-numeric:tabular-nums}
 button,input,select,textarea{font:inherit;color:inherit}
-:focus{outline:none}:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
-.wrap{max-width:900px;margin:0 auto;padding:0 18px 120px}
-h1,h2,h3,h4{font-family:var(--cond);font-weight:600;line-height:1.12;letter-spacing:-.015em;margin:0;color:var(--ink)}
-h1{font-size:34px}h2{font-size:26px}h3{font-size:21px}h4{font-size:17px}
-.kicker{font:500 11px/1.3 var(--sans);letter-spacing:.1em;text-transform:uppercase;color:var(--accent-700)}
-p{margin:.4em 0}.muted{color:var(--muted)}.small{font-size:13.5px}.warn{color:var(--warn)}.ok{color:var(--ok)}
+:focus{outline:none}:focus-visible{outline:2px solid var(--navy);outline-offset:2px}
+.wrap{max-width:900px;margin:0 auto;padding:0 18px 80px}
+h1,h2,h3,h4{font-family:var(--serif);font-weight:600;line-height:1.15;letter-spacing:-.01em;margin:0;color:var(--navy)}
+h1{font-size:30px}h2{font-size:24px}h3{font-size:19px}h4{font-size:16px}
+.kicker{font:500 11px/1.3 var(--sans);letter-spacing:.12em;text-transform:uppercase;color:var(--navy-2)}
+p{margin:.4em 0}.muted{color:var(--muted)}.small{font-size:13px}.warn{color:var(--red)}.ok{color:var(--green)}
 .row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}.sp{flex:1}
-.bp{position:relative;border:1px solid var(--line)}
-.bp>i.c{position:absolute;width:11px;height:11px;color:rgba(29,31,32,.55);pointer-events:none}
-@media (prefers-color-scheme:dark){.bp>i.c{color:rgba(242,242,243,.55)}}
-.bp>i.c::before,.bp>i.c::after{content:"";position:absolute;background:currentColor}
-.bp>i.c::before{left:5px;top:0;width:1px;height:100%}.bp>i.c::after{top:5px;left:0;width:100%;height:1px}
-.bp>i.c.tl{top:-6px;left:-6px}.bp>i.c.tr{top:-6px;right:-6px}.bp>i.c.bl{bottom:-6px;left:-6px}.bp>i.c.br{bottom:-6px;right:-6px}
-.btn.primary.bp>i.c{color:var(--accent-900)}
-header.top{position:sticky;top:0;z-index:20;background:var(--bg);border-bottom:1px solid var(--line)}
-header.top .bar{max-width:900px;margin:0 auto;display:flex;align-items:center;gap:12px;padding:8px 18px}
-.brand{font:600 17px/1.1 var(--cond);white-space:nowrap}
-.brand small{display:block;font:500 10.5px/1.2 var(--sans);letter-spacing:.08em;text-transform:uppercase;color:var(--accent-700);margin-top:2px}
-.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;border:1px solid var(--line);background:transparent;padding:8px 14px;cursor:pointer;font:600 15px/1.2 var(--cond);min-height:44px;color:var(--ink);text-decoration:none}
-.btn:hover{background:var(--line-soft)}
-.btn.primary{background:var(--accent);border-color:var(--accent);color:#f2f2f3}
-.btn.good{background:var(--accent-900);border-color:var(--accent-900);color:#f2f2f3}
-.btn.warn{border-color:var(--warn);color:var(--warn)}
-.btn.small{min-height:36px;padding:6px 10px;font-size:14px}.btn.big{min-height:54px;font-size:17px;width:100%}
+.n{font-family:var(--mono);text-align:right}
+/* header: a drawing title strip */
+header.top{position:sticky;top:0;z-index:20;background:var(--white);border-bottom:1px solid var(--rule)}
+header.top .topbar{max-width:900px;margin:0 auto;display:flex;align-items:center;gap:12px;padding:9px 18px}
+.brand{display:flex;align-items:center;gap:10px;min-width:0}
+.brand .doc{white-space:nowrap}
+.brand .mark{display:inline-flex;align-items:center;justify-content:center;width:34px;height:34px;border:1.5px solid var(--navy);color:var(--navy);font:600 13px/1 var(--serif);letter-spacing:.04em}
+.brand b{display:block;font:600 16px/1.1 var(--serif);color:var(--navy)}
+.brand small{display:block;font:500 10.5px/1.2 var(--sans);letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-top:2px}
+.brand .doc{font:400 12px/1.2 var(--mono);color:var(--muted)}
+.brand b{white-space:nowrap}
+@media (max-width:560px){.brand small{display:none}}
+/* title block */
+.titleblock{display:grid;grid-template-columns:1fr auto;gap:14px 24px;border:1px solid var(--rule);background:var(--white);margin-top:16px;padding:14px 16px}
+.titleblock .tb-side{display:flex;flex-direction:column;gap:8px;min-width:240px}
+@media (max-width:640px){.titleblock{grid-template-columns:1fr}.titleblock .tb-side{min-width:0}}
+/* buttons */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;border:1px solid var(--navy);background:var(--white);padding:8px 14px;cursor:pointer;font:600 12.5px/1.2 var(--sans);letter-spacing:.08em;text-transform:uppercase;min-height:44px;color:var(--navy);text-decoration:none}
+.btn:hover{background:var(--fill)}
+.btn.primary{background:var(--navy);border-color:var(--navy);color:#fff}.btn.primary:hover{background:var(--navy-2)}
+.btn.good{background:var(--green);border-color:var(--green);color:#fff}
+.btn.warn{border-color:var(--red);color:var(--red)}.btn.warn:hover{background:var(--red-soft)}
+.btn.small{min-height:36px;padding:6px 10px;font-size:11.5px}.btn.big{min-height:54px;font-size:14px;width:100%}
 .btn[disabled]{opacity:.45;cursor:not-allowed}
-.link{background:none;border:0;color:var(--accent-700);text-decoration:underline;text-underline-offset:3px;cursor:pointer;padding:6px 0;font-weight:500}
-.seg{display:inline-flex;border:1px solid var(--line);flex-wrap:wrap}
-.seg button{border:0;background:transparent;padding:8px 12px;cursor:pointer;font-weight:500;font-size:13.5px;min-height:40px;border-right:1px solid var(--line);color:var(--ink)}
-.seg button:last-child{border-right:0}.seg button[aria-pressed="true"]{background:var(--accent);color:#f2f2f3}
-.card{position:relative;border:1px solid var(--line);padding:14px 16px;margin:12px 0}
-.card h3{margin-bottom:8px}
+.link{background:none;border:0;color:var(--navy-2);text-decoration:underline;text-underline-offset:3px;cursor:pointer;padding:6px 0;font-weight:500}
+/* step flow */
+.steps{list-style:none;margin:14px 0 0;padding:0;display:flex;gap:0;border:1px solid var(--rule);background:var(--white);overflow-x:auto;scrollbar-width:none}
+.steps::-webkit-scrollbar{display:none}
+.steps li{flex:1 0 auto}
+.steps button{width:100%;border:0;border-right:1px solid var(--rule-soft);background:transparent;padding:10px 14px 9px;cursor:pointer;display:flex;align-items:center;gap:9px;min-height:50px;color:var(--muted);white-space:nowrap;border-bottom:3px solid transparent}
+.steps li:last-child button{border-right:0}
+.steps button .num{display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border:1px solid currentColor;border-radius:50%;font:600 11px/1 var(--serif)}
+.steps button .t{font:500 13px/1.1 var(--sans)}
+.steps button[aria-current="step"]{color:var(--navy);border-bottom-color:var(--navy)}
+.steps button[aria-current="step"] .num{background:var(--navy);border-color:var(--navy);color:#fff}
+.steps button.done{color:var(--navy-2)}.steps button.done .num{background:var(--blue);border-color:var(--blue)}
+@media (max-width:560px){.steps li{flex:0 0 auto}.steps li:has(button[aria-current]){flex:1 1 auto}.steps button{padding:10px 12px 9px}.steps button:not([aria-current]) .t{display:none}}
+.progress{height:3px;background:var(--rule-faint);margin-top:-1px}.progress i{display:block;height:100%;background:var(--navy);transition:width .25s}
+.stepnav{display:flex;gap:10px;justify-content:space-between;align-items:center;margin:18px 0 0;padding-top:14px;border-top:1px solid var(--rule)}
+.stepnav .btn{flex:1;max-width:320px}.stepnav .btn.next{margin-left:auto}
+/* summary strip pinned under the header */
+.strip{position:sticky;top:53px;z-index:15;margin-top:12px;border:1px solid var(--rule);background:var(--white)}
+.strip .in{max-width:900px;margin:0 auto;display:grid;grid-template-columns:repeat(3,1fr) auto;gap:0;align-items:stretch}
+.strip .in>div{padding:8px 12px;border-right:1px solid var(--rule-soft);min-width:0}
+.strip .k{font:500 10px/1.2 var(--sans);letter-spacing:.05em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-transform:uppercase;color:var(--muted)}
+.strip .v{font:500 18px/1.2 var(--mono);color:var(--navy);margin-top:2px;white-space:nowrap}.strip .v.warn{color:var(--red)}
+.strip .in>div.verdict{display:flex;align-items:center;border-right:0;padding:8px 12px}
+.pill{display:inline-block;padding:5px 10px;font:600 11px/1.2 var(--sans);letter-spacing:.1em;text-transform:uppercase;border:1.5px solid currentColor;white-space:nowrap}
+.pill.ok{color:var(--green);background:var(--green-soft)}.pill.crit{color:var(--amber);background:var(--amber-soft)}.pill.warn{color:var(--red);background:var(--red-soft)}
+@media (max-width:560px){.strip .in{grid-template-columns:1fr 1fr 1fr}.strip .in>div{padding:7px 8px}.strip .in>div.verdict{grid-column:1/-1;border-top:1px solid var(--rule-soft);justify-content:center;padding:6px}.strip .v{font-size:16px}}
+/* cards = numbered sections of the document */
+.card{position:relative;border:1px solid var(--rule);background:var(--white);padding:16px 18px 18px;margin:14px 0}
+.card>.kicker{margin-bottom:2px}
+.card h3{margin-bottom:10px;padding-bottom:8px;border-bottom:1px solid var(--rule)}
 .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:12px}.grid .wide{grid-column:1/-1}
-label.f{display:flex;flex-direction:column;gap:5px;font-size:12px;color:var(--muted);font-weight:500;min-width:0}
-label.f input,label.f select,label.f textarea{border:1px solid var(--line);padding:9px 10px;background:var(--surface);color:var(--ink);font-size:16px;min-height:48px;width:100%}
-label.f input:focus-visible,label.f select:focus-visible,label.f textarea:focus-visible{border-color:var(--accent);outline-offset:0}
-label.f textarea{min-height:90px;resize:vertical;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:16px}
-label.chk{display:flex;gap:10px;align-items:flex-start;padding:8px 0;border-bottom:1px solid var(--line-soft);font-size:14.5px;cursor:pointer}
-label.chk input{width:22px;height:22px;margin:1px 0 0;accent-color:var(--accent-900);flex:none}
-.tablewrap{overflow-x:auto;border:1px solid var(--line);margin:8px 0 12px}
-table{border-collapse:collapse;width:100%;font-size:14px}
-th,td{padding:7px 9px;border-bottom:1px solid var(--line-soft);text-align:left;vertical-align:top}
-th{font:500 11px/1.3 var(--sans);letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
-td.n,th.n{text-align:right;font-variant-numeric:tabular-nums}
-tr.hit td{background:var(--accent-200);font-weight:600}
-td.pick{outline:2px solid var(--accent-900);outline-offset:-2px}
-.pill{display:inline-block;font:600 11px/1 var(--sans);letter-spacing:.06em;text-transform:uppercase;padding:5px 8px;border:1px solid var(--line);color:var(--muted)}
-.pill.ok{border-color:var(--ok);color:var(--ok)}.pill.warn{border-color:var(--warn);color:var(--warn)}.pill.crit{background:var(--warn);border-color:var(--warn);color:#fff}
-.pill.navy{background:var(--accent-900);border-color:var(--accent-900);color:#f2f2f3}
-.notice{border:1px solid var(--line);padding:10px 14px;margin:10px 0;font-size:14px}
-.notice.warn{border-color:var(--warn);color:var(--warn)}
-.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:1px;background:var(--line);border:1px solid var(--line);margin:8px 0}
-.kpi{background:var(--bg);padding:10px 12px}.kpi .v{font:600 26px/1.05 var(--cond);margin-top:4px}.kpi .v small{font:500 13px var(--sans);color:var(--muted)}
-.kpi.bad .v{color:var(--warn)}.kpi.good .v{color:var(--accent-900)}
-@media (prefers-color-scheme:dark){.kpi.good .v{color:var(--accent-600)}}
-.bar{height:8px;background:var(--n200);border:1px solid var(--line);position:relative;margin-top:6px}
-.bar i{position:absolute;left:0;top:0;bottom:0;background:var(--accent)}.bar i.bad{background:var(--warn)}
-.bar b{position:absolute;top:-3px;bottom:-3px;width:2px;background:var(--warn)}
-.strip{position:fixed;left:0;right:0;bottom:0;z-index:20;background:var(--bg);border-top:1px solid var(--line);padding:8px 18px env(safe-area-inset-bottom,8px)}
-.strip .in{max-width:900px;margin:0 auto;display:flex;gap:16px;align-items:center;flex-wrap:wrap}
-.strip .k{font:500 10.5px/1 var(--sans);letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
-.strip .v{font:600 20px/1.1 var(--cond)}
-.hidden{display:none!important}
-.sketch{border:1px solid var(--line);background:var(--surface);width:100%;height:auto;display:block}
-.sk-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}@media (max-width:640px){.sk-grid{grid-template-columns:1fr}}
-.toast{position:fixed;left:50%;bottom:90px;transform:translateX(-50%);background:var(--accent-900);color:#f2f2f3;padding:10px 16px;font-size:14px;z-index:40;opacity:0;transition:opacity .2s;pointer-events:none}
+label.f{display:flex;flex-direction:column;gap:4px;font:500 11px/1.3 var(--sans);letter-spacing:.06em;text-transform:uppercase;color:var(--muted);min-width:0}
+label.f input,label.f select,label.f textarea{border:1px solid var(--rule-soft);border-bottom:1px solid var(--ink);padding:9px 10px;background:var(--white);color:var(--ink);font:400 16px/1.3 var(--sans);letter-spacing:0;text-transform:none;min-height:46px;width:100%;border-radius:0;-webkit-appearance:none;appearance:none}
+label.f input[type=number]{font-family:var(--mono)}
+label.f select{background-image:linear-gradient(45deg,transparent 50%,var(--navy) 50%),linear-gradient(135deg,var(--navy) 50%,transparent 50%);background-position:calc(100% - 16px) 20px,calc(100% - 11px) 20px;background-size:5px 5px;background-repeat:no-repeat;padding-right:30px}
+label.f input:focus-visible,label.f select:focus-visible,label.f textarea:focus-visible{border-color:var(--navy);outline-offset:0}
+label.f textarea{min-height:90px;resize:vertical;font-family:var(--mono);font-size:16px}
+label.chk{display:flex;gap:10px;align-items:flex-start;padding:8px 0;border-bottom:1px solid var(--rule-faint);cursor:pointer;font-size:14px}
+label.chk:last-of-type{border-bottom:0}
+label.chk input{width:20px;height:20px;margin:1px 0 0;flex:none;accent-color:var(--navy)}
+.notice{border-left:3px solid var(--navy);background:var(--fill);padding:8px 12px;margin:10px 0;font-size:13.5px}
+.notice.warn{border-color:var(--red);background:var(--red-soft);color:var(--red)}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin:12px 0 4px}
+.kpi{border-top:2px solid var(--navy);padding:8px 2px 4px}
+.kpi .kicker{color:var(--muted);letter-spacing:.1em;font-size:10px}
+.kpi .v{font:500 24px/1.15 var(--mono);color:var(--navy);margin-top:3px;word-break:break-word}.kpi .v small{font:400 12px/1.3 var(--sans);color:var(--muted)}
+.kpi.good{border-top-color:var(--green)}.kpi.good .v{color:var(--green)}.kpi.bad{border-top-color:var(--red)}.kpi.bad .v{color:var(--red)}
+.bar{height:6px;background:var(--rule-faint);margin-top:8px;position:relative}.bar i{display:block;height:100%;background:var(--navy)}.bar i.bad{background:var(--red)}.bar b{position:absolute;top:-3px;width:2px;height:12px;background:var(--amber)}
+.tablewrap{overflow:auto;margin:10px 0;border:1px solid var(--rule-soft)}
+table{border-collapse:collapse;width:100%;font-size:13.5px}
+th,td{padding:6px 8px;border-bottom:1px solid var(--rule-faint);text-align:left;white-space:nowrap}
+th{font:500 10.5px/1.3 var(--sans);letter-spacing:.08em;text-transform:uppercase;color:var(--muted);background:var(--paper-2);position:sticky;top:0}
+td.n,th.n{text-align:right;font-family:var(--mono)}
+td.pick,th.pick{background:var(--fill)}
+tr.hit td{background:var(--blue);font-weight:500}
+.toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:var(--navy);color:#fff;padding:10px 16px;font-size:14px;opacity:0;transition:opacity .2s;pointer-events:none;z-index:40}
 .toast.on{opacity:1}
+.hidden{display:none!important}
 .rig-row{display:grid;grid-template-columns:2fr 1fr 1fr 1fr auto;gap:8px;align-items:end;margin-bottom:8px}
 @media (max-width:560px){.rig-row{grid-template-columns:1fr 1fr 1fr}.rig-row .f:first-child{grid-column:1/-1}}
 /* ── printed plan ── */
 #sheet{display:none}
-body.preview #app{display:none}body.preview #sheet{display:block}
-.sheet{max-width:900px;margin:0 auto;padding:18px;background:#fff;color:#1d1f20;font-size:12.5px;line-height:1.4}
-.sheet h1{font-size:28px}.sheet h2{font-size:15px;margin:14px 0 6px;padding-bottom:3px;border-bottom:1px solid #1d1f20;text-transform:uppercase;letter-spacing:.06em;font-family:var(--sans);font-weight:600}
-.sheet .head{display:flex;justify-content:space-between;gap:16px;border-bottom:2px solid #144170;padding-bottom:8px}
-.sheet .head .kicker{color:#416180}
-.sheet .box{border:1px solid #1d1f20;padding:8px 10px}
+body.preview #body,body.preview .strip{display:none}body.preview #sheet{display:block}
+.sheet{max-width:900px;margin:14px auto 0;padding:22px 24px;background:#fff;color:#15181c;font-size:12px;line-height:1.35;border:1px solid #15181c;font-family:var(--sans)}
+.sheet h1{font-size:26px}.sheet h2{font:600 14px/1.2 var(--serif);margin:11px 0 5px;padding-bottom:3px;border-bottom:1px solid #0b1f3a;letter-spacing:.02em;color:#0b1f3a}
+.sheet .head{display:flex;justify-content:space-between;gap:16px;border-bottom:2px solid #0b1f3a;padding-bottom:8px}
+.sheet .head .kicker{color:#35506f}
+.sheet .box{border:1px solid #15181c;padding:8px 10px}
 .sheet .cols{display:grid;grid-template-columns:1fr 1fr;gap:12px}.sheet .cols3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}
-.sheet table{font-size:12px}.sheet th,.sheet td{padding:4px 6px;border-bottom:1px solid #d4d4d7}.sheet th{color:#5d5d60}
-.sheet dl{display:grid;grid-template-columns:auto 1fr;gap:3px 10px;margin:0}.sheet dt{color:#5d5d60}.sheet dd{margin:0;font-weight:500}
-.sheet .verdict{border:2px solid #144170;padding:10px 12px;display:flex;gap:16px;align-items:center;flex-wrap:wrap;margin-top:10px}
-.sheet .verdict.crit{border-color:#a8502a}.sheet .verdict .big{font:600 24px/1 var(--cond)}
-.sheet .banner{background:#a8502a;color:#fff;padding:8px 12px;font-weight:600;margin:10px 0}
+.sheet table{font-size:12px}.sheet th,.sheet td{padding:4px 6px;border-bottom:1px solid #cfd5dd}.sheet th{color:#5a6270;background:none;position:static}
+.sheet dl{display:grid;grid-template-columns:auto 1fr;gap:3px 10px;margin:0}.sheet dt{color:#5a6270}.sheet dd{margin:0;font-weight:500}
+.sheet .verdict{border:2px solid #0b1f3a;padding:10px 12px;display:flex;gap:16px;align-items:center;flex-wrap:wrap;margin-top:10px}
+.sheet .verdict.crit{border-color:#b3261e}.sheet .verdict .big{font:600 22px/1 var(--serif);color:#0b1f3a}.sheet .verdict.crit .big{color:#b3261e}
+.sheet .banner{background:#b3261e;color:#fff;padding:8px 12px;font-weight:600;margin:10px 0}
 .sheet .sign{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:8px}
-.sheet .sign div{border:1px solid #1d1f20;padding:6px 8px;height:78px;font-size:11px;color:#5d5d60}
-.sheet .sign b{display:block;color:#1d1f20;font-size:12px}
+.sheet .sign div{border:1px solid #15181c;padding:6px 8px;height:66px;font-size:11px;color:#5a6270}
+.sheet .sign b{display:block;color:#15181c;font-size:12px}
 .sheet .chk{columns:2;font-size:12px}.sheet .chk div{break-inside:avoid;padding:2px 0}
-.sheet .chk i{display:inline-block;width:11px;height:11px;border:1px solid #1d1f20;margin-right:6px;vertical-align:-1px}
-.sheet .chk i.on{background:#144170}
-.sheet .foot{margin-top:14px;font-size:10.5px;color:#5d5d60;border-top:1px solid #d4d4d7;padding-top:6px}
+.sheet .chk i{display:inline-block;width:11px;height:11px;border:1px solid #15181c;margin-right:6px;vertical-align:-1px}
+.sheet .chk i.on{background:#0b1f3a}
+.sheet .foot{margin-top:10px;font-size:10px;color:#5a6270;border-top:1px solid #cfd5dd;padding-top:6px}
 .sheet .keep{break-inside:avoid}
+.sheet .n{font-family:var(--mono)}
+.doctools{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:14px}
 @media print{
   @page{size:A4;margin:12mm}
-  body{background:#fff}#app,.strip,.toast,header.top,.noprint{display:none!important}#sheet{display:block!important}
-  .sheet{max-width:none;padding:0}.sheet .box,.sheet table,.sheet .verdict,.sheet .keep{break-inside:avoid}
+  body{background:#fff}header.top,.toast,.titleblock,.steps,.progress,.strip,#body,.noprint{display:none!important}#sheet{display:block!important}
+  .wrap{max-width:none;padding:0}.sheet{max-width:none;padding:0;border:0;margin:0}.sheet .box,.sheet table,.sheet .verdict,.sheet .keep{break-inside:avoid}
 }
 </style>
 </head>
 <body>
-<header class="top"><div class="bar">
-  <div class="brand">Lift planner<small>Sennebogen cranes</small></div>
+<header class="top"><div class="topbar">
+  <div class="brand"><span class="mark">LP</span><div><b>Lift plan</b><small>Sennebogen telescopic crawler cranes</small></div></div>
   <div class="sp"></div>
+  <div class="brand"><span class="doc" id="docRef"></span></div>
 </div></header>
 
 <div id="app" class="wrap">
-  <div style="padding-top:14px">
-    <div class="kicker">Lift plan</div>
-    <h1 id="planTitle">Lift plan</h1>
-    <div class="row" style="margin-top:10px">
-      <label class="f" style="flex:1;min-width:200px">Saved plans<select id="planSel"></select></label>
-      <button class="btn small" id="newPlan">New plan</button>
-      <button class="btn small" id="dupPlan">Duplicate</button>
-      <button class="btn small warn" id="delPlan">Delete</button>
+  <section class="titleblock">
+    <div>
+      <div class="kicker">Lift plan</div>
+      <h1 id="planTitle">Lift plan</h1>
+      <p class="small muted" style="margin:6px 0 0">Work through the five steps. The summary below updates as you type; step 5 is the document to print.</p>
     </div>
-    <div class="seg" style="margin-top:12px" id="tabs">
-      <button data-tab="lift" aria-pressed="true">Lift</button><button data-tab="crane">Crane &amp; chart</button><button data-tab="load">Load &amp; rigging</button><button data-tab="check">Checks</button><button data-tab="doc">Plan document</button>
+    <div class="tb-side">
+      <label class="f">Saved plans<select id="planSel"></select></label>
+      <div class="row">
+        <button class="btn small" id="newPlan">New plan</button>
+        <button class="btn small" id="dupPlan">Duplicate</button>
+        <button class="btn small warn" id="delPlan">Delete</button>
+      </div>
     </div>
-  </div>
+  </section>
+  <ol class="steps" id="steps">
+    <li><button data-tab="lift"><span class="num">1</span><span class="t">Lift</span></button></li>
+    <li><button data-tab="crane"><span class="num">2</span><span class="t">Crane &amp; chart</span></button></li>
+    <li><button data-tab="load"><span class="num">3</span><span class="t">Load &amp; rigging</span></button></li>
+    <li><button data-tab="check"><span class="num">4</span><span class="t">Checks</span></button></li>
+    <li><button data-tab="doc"><span class="num">5</span><span class="t">Document</span></button></li>
+  </ol>
+  <div class="progress"><i id="progress"></i></div>
+  <div class="strip" id="strip"></div>
   <div id="body"></div>
+  <div id="sheet"></div>
 </div>
 
-<div class="strip" id="strip"></div>
-<div id="sheet"></div>
 <div class="toast" id="toast"></div>
 
 <script>
@@ -172,7 +207,7 @@ const fmt=(n,d=1)=>n==null||!isFinite(n)?"–":Number(n).toLocaleString("en-AU",
 const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,6);
 const today=()=>{const d=new Date();return new Date(d.getTime()-d.getTimezoneOffset()*6e4).toISOString().slice(0,10)};
 const store={get(k,d){try{const v=localStorage.getItem("lp."+k);return v?JSON.parse(v):d}catch(e){return d}},set(k,v){localStorage.setItem("lp."+k,JSON.stringify(v))}};
-const BP='<i class="c tl"></i><i class="c tr"></i><i class="c bl"></i><i class="c br"></i>';
+const BP='';
 let toastT;function toast(m){const t=$("#toast");t.textContent=m;t.classList.add("on");clearTimeout(toastT);toastT=setTimeout(()=>t.classList.remove("on"),2200)}
 
 /* Sennebogen range – indicative headline figures from public sources only. They are shown for
@@ -326,11 +361,18 @@ function field(k,label,type,attrs,v){const p=plan();const val=v!==undefined?v:(p
   return `<label class="f">${label}<input data-k="${k}" type="${type||"text"}" ${type==="number"?'inputmode="decimal"':""} ${attrs||""} value="${esc(val)}"></label>`}
 function render(){const p=plan();$("#planTitle").textContent=planName(p);
   $("#planSel").innerHTML=S.plans.slice().sort((a,b)=>(b.updatedAt||b.createdAt)-(a.updatedAt||a.createdAt)).map(x=>`<option value="${x.id}" ${x.id===p.id?"selected":""}>${esc(planName(x))} · ${esc(x.date||"")}</option>`).join("");
-  $$("#tabs button").forEach(b=>b.setAttribute("aria-pressed",b.dataset.tab===S.tab));
+  const si=STEPS.findIndex(s=>s[0]===S.tab);
+  $$("#steps button").forEach(b=>{const i=STEPS.findIndex(s=>s[0]===b.dataset.tab);if(i===si)b.setAttribute("aria-current","step");else b.removeAttribute("aria-current");b.classList.toggle("done",i<si)});
+  $("#progress").style.width=((si+1)/STEPS.length*100)+"%";
+  $("#docRef").textContent=[p.liftNo,p.date].filter(Boolean).join(" · ");
   document.body.classList.toggle("preview",S.tab==="doc");
-  ({lift:tabLift,crane:tabCrane,load:tabLoad,check:tabCheck,doc:tabDoc})[S.tab]();renderStrip()}
+  ({lift:tabLift,crane:tabCrane,load:tabLoad,check:tabCheck,doc:tabDoc})[S.tab]();
+  if(S.tab!=="doc"){const prev=STEPS[si-1],next=STEPS[si+1];
+    $("#body").insertAdjacentHTML("beforeend",`<div class="stepnav">${prev?`<button class="btn" data-tab="${prev[0]}">← ${esc(prev[1])}</button>`:""}${next?`<button class="btn primary next" data-tab="${next[0]}">${esc(next[1])} →</button>`:""}</div>`)}
+  renderStrip()}
+const STEPS=[["lift","Lift"],["crane","Crane & chart"],["load","Load & rigging"],["check","Checks"],["doc","Document"]];
 function renderStrip(){const R=calc(plan());const cls=R.fails.length?"warn":R.critical?"crit":"ok";
-  $("#strip").innerHTML=`<div class="in"><div><div class="k">Gross load</div><div class="v">${fmt(R.gross,2)} t</div></div><div><div class="k">Rated at ${fmt(R.gov.chartR||R.govR)} m</div><div class="v">${R.cap?fmt(R.cap,2)+" t":"–"}</div></div><div><div class="k">Utilisation</div><div class="v ${R.pct>100?"warn":""}">${R.pct!=null?fmt(R.pct,0)+"%":"–"}</div></div><div class="sp"></div><span class="pill ${cls}">${R.fails.length?"Not OK":R.critical?"Critical lift":"Standard lift"}</span></div>`;
+  $("#strip").innerHTML=`<div class="in"><div><div class="k">Gross load</div><div class="v">${fmt(R.gross,2)} t</div></div><div><div class="k">Rated at ${fmt(R.gov.chartR||R.govR)} m</div><div class="v">${R.cap?fmt(R.cap,2)+" t":"–"}</div></div><div><div class="k">Utilisation</div><div class="v ${R.pct>100?"warn":""}">${R.pct!=null?fmt(R.pct,0)+"%":"–"}</div></div><div class="verdict"><span class="pill ${cls}">${R.fails.length?"Not OK":R.critical?"Critical lift":"Standard lift"}</span></div></div>`;
   if(S.tab!=="doc")$("#sheet").innerHTML=""}
 
 function tabLift(){const p=plan();
@@ -441,31 +483,31 @@ function sketchPlan(p,R){const W=360,H=300,cx=W/2,cy=H/2,c=R.chart;const maxR=Ma
   const pos=(r,deg)=>{const a=(deg-90)*Math.PI/180;return [cx+r*k*Math.cos(a),cy+r*k*Math.sin(a)]};
   const [px,py]=pos(num(p.pickR),0),[sx,sy]=pos(num(p.setR),num(p.slewDeg));const lw=Math.max(num(p.loadL),1)*k,lh=Math.max(num(p.loadW),1)*k;
   const rings=[2,4,6,8,10,12,14,16,18,20,24,28,32,36,40,48,56,64].filter(r=>r<=maxR);
-  return `<svg class="sketch" viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg" font-family="Barlow,Arial,sans-serif" font-size="10">
-    ${rings.map(r=>`<circle cx="${cx}" cy="${cy}" r="${r*k}" fill="none" stroke="#98989b" stroke-width=".5" stroke-dasharray="3 3"/><text x="${cx+3}" y="${cy+r*k-2}" fill="#7a7a7d">${r}</text>`).join("")}
-    <rect x="${cx-gauge/2-tw/2}" y="${cy-tl/2}" width="${tw}" height="${tl}" fill="#5980a6" opacity=".5"/><rect x="${cx+gauge/2-tw/2}" y="${cy-tl/2}" width="${tw}" height="${tl}" fill="#5980a6" opacity=".5"/>
-    <rect x="${cx-gauge/2}" y="${cy-tl*0.28}" width="${gauge}" height="${tl*0.56}" fill="#144170" opacity=".85"/>
-    <path d="M${cx},${cy} L${px},${py}" stroke="#144170" stroke-width="3"/><path d="M${cx},${cy} L${sx},${sy}" stroke="#144170" stroke-width="3" stroke-dasharray="6 4"/>
-    <path d="M${pos(Math.min(num(p.pickR),num(p.setR))*0.5,0).join(",")} A${Math.min(num(p.pickR),num(p.setR))*0.5*k},${Math.min(num(p.pickR),num(p.setR))*0.5*k} 0 ${num(p.slewDeg)>180?1:0} 1 ${pos(Math.min(num(p.pickR),num(p.setR))*0.5,num(p.slewDeg)).join(",")}" fill="none" stroke="#a8502a" stroke-width="1"/>
-    <rect x="${px-lw/2}" y="${py-lh/2}" width="${lw}" height="${lh}" fill="#b5d9fd" stroke="#144170"/><text x="${px}" y="${py-lh/2-4}" text-anchor="middle" fill="#1d1f20" font-weight="600">PICK ${fmt(num(p.pickR))} m</text>
-    <rect x="${sx-lw/2}" y="${sy-lh/2}" width="${lw}" height="${lh}" fill="none" stroke="#144170" stroke-dasharray="4 3"/><text x="${sx}" y="${sy+lh/2+11}" text-anchor="middle" fill="#1d1f20" font-weight="600">SET ${fmt(num(p.setR))} m</text>
-    <text x="6" y="${H-6}" fill="#7a7a7d">Plan · slew ${fmt(num(p.slewDeg),0)}° · rings in metres</text></svg>`}
+  return `<svg class="sketch" viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg" font-family="IBM Plex Sans,Arial,sans-serif" font-size="10">
+    ${rings.map(r=>`<circle cx="${cx}" cy="${cy}" r="${r*k}" fill="none" stroke="#9aa3ae" stroke-width=".5" stroke-dasharray="3 3"/><text x="${cx+3}" y="${cy+r*k-2}" fill="#7c8696">${r}</text>`).join("")}
+    <rect x="${cx-gauge/2-tw/2}" y="${cy-tl/2}" width="${tw}" height="${tl}" fill="#6b7f99" opacity=".5"/><rect x="${cx+gauge/2-tw/2}" y="${cy-tl/2}" width="${tw}" height="${tl}" fill="#6b7f99" opacity=".5"/>
+    <rect x="${cx-gauge/2}" y="${cy-tl*0.28}" width="${gauge}" height="${tl*0.56}" fill="#0b1f3a" opacity=".85"/>
+    <path d="M${cx},${cy} L${px},${py}" stroke="#0b1f3a" stroke-width="3"/><path d="M${cx},${cy} L${sx},${sy}" stroke="#0b1f3a" stroke-width="3" stroke-dasharray="6 4"/>
+    <path d="M${pos(Math.min(num(p.pickR),num(p.setR))*0.5,0).join(",")} A${Math.min(num(p.pickR),num(p.setR))*0.5*k},${Math.min(num(p.pickR),num(p.setR))*0.5*k} 0 ${num(p.slewDeg)>180?1:0} 1 ${pos(Math.min(num(p.pickR),num(p.setR))*0.5,num(p.slewDeg)).join(",")}" fill="none" stroke="#b3261e" stroke-width="1"/>
+    <rect x="${px-lw/2}" y="${py-lh/2}" width="${lw}" height="${lh}" fill="#dfe7f0" stroke="#0b1f3a"/><text x="${px}" y="${py-lh/2-4}" text-anchor="middle" fill="#15181c" font-weight="600">PICK ${fmt(num(p.pickR))} m</text>
+    <rect x="${sx-lw/2}" y="${sy-lh/2}" width="${lw}" height="${lh}" fill="none" stroke="#0b1f3a" stroke-dasharray="4 3"/><text x="${sx}" y="${sy+lh/2+11}" text-anchor="middle" fill="#15181c" font-weight="600">SET ${fmt(num(p.setR))} m</text>
+    <text x="6" y="${H-6}" fill="#7c8696">Plan · slew ${fmt(num(p.slewDeg),0)}° · rings in metres</text></svg>`}
 function sketchElev(p,R){const W=360,H=300,c=R.chart,g=R.geom;const Rg=R.govR;const L=g&&g.L||(c?c.booms[R.bi]:20);
   const tipH=g&&!g.unreach?g.tipH:L*0.8;const spanX=Math.max(Rg+6,L*0.6+6),spanY=Math.max(tipH+4,10);const k=Math.min((W-40)/spanX,(H-40)/spanY);
   const gx=20,gy=H-20;const X=x=>gx+x*k,Y=y=>gy-y*k;const pivX=c?num(c.pivotX):1,pivH=c?num(c.pivotH):2;
   const dx=Rg-pivX,ok=g&&!g.unreach;const tx=ok?Rg:pivX+L*0.6,ty=ok?tipH:pivH+L*0.8;
   const hookY=ok?Math.max(0,num(p.setLevel)+num(p.loadH)+num(p.rigH)):ty-2;const loadTop=num(p.setLevel)+num(p.loadH),loadH=Math.max(num(p.loadH),0.5),loadL=Math.max(num(p.loadL),1);
   const od=num(p.obstD),oh=num(p.obstH);
-  return `<svg class="sketch" viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg" font-family="Barlow,Arial,sans-serif" font-size="10">
-    <line x1="0" y1="${gy}" x2="${W}" y2="${gy}" stroke="#1d1f20"/>
-    <rect x="${X(-(c&&c.trackLen||7)/2)}" y="${Y(1.1)}" width="${(c&&c.trackLen||7)*k}" height="${1.1*k}" fill="#5980a6" opacity=".6"/><rect x="${X(-2.2)}" y="${Y(pivH+0.6)}" width="${4.6*k}" height="${(pivH-0.5)*k}" fill="#144170" opacity=".85"/>
-    <line x1="${X(-pivX)}" y1="${Y(pivH)}" x2="${X(tx)}" y2="${Y(ty)}" stroke="#144170" stroke-width="5" stroke-linecap="round"/>
-    ${ok?`<line x1="${X(Rg)}" y1="${Y(ty)}" x2="${X(Rg)}" y2="${Y(hookY)}" stroke="#1d1f20" stroke-width="1"/><rect x="${X(Rg-loadL/2)}" y="${Y(loadTop)}" width="${loadL*k}" height="${loadH*k}" fill="#b5d9fd" stroke="#144170"/>
-      ${num(p.setLevel)>0?`<rect x="${X(Rg-loadL/2-1)}" y="${Y(num(p.setLevel))}" width="${(loadL+2)*k}" height="${num(p.setLevel)*k}" fill="#d4d4d7" stroke="#7a7a7d"/>`:""}`:`<text x="${X(tx)}" y="${Y(ty)-6}" fill="#a8502a" font-weight="600">boom too short</text>`}
-    ${od>0&&oh>0?`<rect x="${X(od)-3}" y="${Y(oh)}" width="6" height="${oh*k}" fill="#a8502a" opacity=".8"/><text x="${X(od)+6}" y="${Y(oh)-3}" fill="#a8502a">obstacle ${fmt(oh)} m</text>`:""}
-    <line x1="${X(0)}" y1="${gy+10}" x2="${X(Rg)}" y2="${gy+10}" stroke="#7a7a7d" stroke-width=".7"/><text x="${X(Rg/2)}" y="${gy+18}" text-anchor="middle" fill="#7a7a7d">R = ${fmt(Rg)} m</text>
-    <text x="${X(tx)+4}" y="${Y(ty)+3}" fill="#1d1f20" font-weight="600">${fmt(L)} m boom${ok?` · ${fmt(g.angle,0)}°`:""}</text>
-    <text x="6" y="12" fill="#7a7a7d">Elevation · governing radius</text></svg>`}
+  return `<svg class="sketch" viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg" font-family="IBM Plex Sans,Arial,sans-serif" font-size="10">
+    <line x1="0" y1="${gy}" x2="${W}" y2="${gy}" stroke="#15181c"/>
+    <rect x="${X(-(c&&c.trackLen||7)/2)}" y="${Y(1.1)}" width="${(c&&c.trackLen||7)*k}" height="${1.1*k}" fill="#6b7f99" opacity=".6"/><rect x="${X(-2.2)}" y="${Y(pivH+0.6)}" width="${4.6*k}" height="${(pivH-0.5)*k}" fill="#0b1f3a" opacity=".85"/>
+    <line x1="${X(-pivX)}" y1="${Y(pivH)}" x2="${X(tx)}" y2="${Y(ty)}" stroke="#0b1f3a" stroke-width="5" stroke-linecap="round"/>
+    ${ok?`<line x1="${X(Rg)}" y1="${Y(ty)}" x2="${X(Rg)}" y2="${Y(hookY)}" stroke="#15181c" stroke-width="1"/><rect x="${X(Rg-loadL/2)}" y="${Y(loadTop)}" width="${loadL*k}" height="${loadH*k}" fill="#dfe7f0" stroke="#0b1f3a"/>
+      ${num(p.setLevel)>0?`<rect x="${X(Rg-loadL/2-1)}" y="${Y(num(p.setLevel))}" width="${(loadL+2)*k}" height="${num(p.setLevel)*k}" fill="#cfd5dd" stroke="#7c8696"/>`:""}`:`<text x="${X(tx)}" y="${Y(ty)-6}" fill="#b3261e" font-weight="600">boom too short</text>`}
+    ${od>0&&oh>0?`<rect x="${X(od)-3}" y="${Y(oh)}" width="6" height="${oh*k}" fill="#b3261e" opacity=".8"/><text x="${X(od)+6}" y="${Y(oh)-3}" fill="#b3261e">obstacle ${fmt(oh)} m</text>`:""}
+    <line x1="${X(0)}" y1="${gy+10}" x2="${X(Rg)}" y2="${gy+10}" stroke="#7c8696" stroke-width=".7"/><text x="${X(Rg/2)}" y="${gy+18}" text-anchor="middle" fill="#7c8696">R = ${fmt(Rg)} m</text>
+    <text x="${X(tx)+4}" y="${Y(ty)+3}" fill="#15181c" font-weight="600">${fmt(L)} m boom${ok?` · ${fmt(g.angle,0)}°`:""}</text>
+    <text x="6" y="12" fill="#7c8696">Elevation · governing radius</text></svg>`}
 
 /* ── printed plan ── */
 function sheetHTML(p){const R=calc(p),c=R.chart,m=R.model,g=R.geom,gr=R.ground,st=S.settings;
@@ -476,7 +518,7 @@ function sheetHTML(p){const R=calc(p),c=R.chart,m=R.model,g=R.geom,gr=R.ground,s
       <div style="text-align:right"><div class="kicker">Date / time</div><div><b>${esc(p.date||"–")}</b> ${esc(p.time||"")}</div><div class="kicker" style="margin-top:6px">Crane</div><div><b>Sennebogen ${esc(m.name)}</b></div></div></div>
     ${c&&c.demo?`<div class="banner">DEMO CHART – the capacities below are fictitious. Replace with the rating book for the machine before use.</div>`:""}
     <div class="verdict ${verdict[1]}"><span class="big">${verdict[0]}</span><span>Gross load <b>${fmt(R.gross,2)} t</b> · rated <b>${R.cap?fmt(R.cap,2)+" t":"–"}</b> at ${fmt(R.gov.chartR||R.govR)} m · utilisation <b>${R.pct!=null?fmt(R.pct,0)+"%":"–"}</b></span>${R.critical?`<span class="small">${esc(R.reasons.join("; "))}</span>`:""}</div>
-    ${R.fails.length?`<div class="box" style="border-color:#a8502a;color:#a8502a;margin-top:8px">${R.fails.map(f=>`<div>✕ ${esc(f)}</div>`).join("")}</div>`:""}
+    ${R.fails.length?`<div class="box" style="border-color:#b3261e;color:#b3261e;margin-top:8px">${R.fails.map(f=>`<div>✕ ${esc(f)}</div>`).join("")}</div>`:""}
     ${R.warnings.length?`<div class="box" style="margin-top:8px;font-size:11.5px">${R.warnings.map(w=>`<div>△ ${esc(w)}</div>`).join("")}</div>`:""}
     <h2>1 · Lift details</h2><div class="cols">
       ${dl([["Location",esc(p.location)],["Description",esc(p.description)],["Permit / notification",esc(p.permitNo)],["Weight source",esc({verified:"Verified",calculated:"Calculated from drawings",estimated:"Estimated"}[p.loadSource]||p.loadSource)]])}
@@ -487,12 +529,12 @@ function sheetHTML(p){const R=calc(p),c=R.chart,m=R.model,g=R.geom,gr=R.ground,s
     <h2>3 · Load and rigging</h2><div class="cols">
       <table><tbody><tr><td>Load${num(p.loadL)>0&&num(p.loadW)>0&&num(p.loadH)>0?` (${[p.loadL,p.loadW,p.loadH].map(v=>fmt(num(v))).join(" × ")} m)`:""}</td><td class="n">${fmt(num(p.loadMass),2)} t</td></tr><tr><td>Allowance ${fmt(num(p.allowPct),0)}%</td><td class="n">${fmt(R.allow,2)} t</td></tr>
         ${(p.rig||[]).map(r=>`<tr><td>${esc(r.name)}${num(r.qty)>1?" × "+num(r.qty):""}${num(r.wll)?` · WLL ${fmt(num(r.wll),1)} t`:""}</td><td class="n">${fmt(num(r.mass)*Math.max(1,num(r.qty)||1),2)} t</td></tr>`).join("")}
-        <tr><td>Hook block</td><td class="n">${R.hookCounted?fmt(R.hookMass,2)+" t":"in chart"}</td></tr><tr style="font-weight:600;border-top:1px solid #1d1f20"><td>Gross load</td><td class="n">${fmt(R.gross,2)} t</td></tr></tbody></table>
+        <tr><td>Hook block</td><td class="n">${R.hookCounted?fmt(R.hookMass,2)+" t":"in chart"}</td></tr><tr style="font-weight:600;border-top:1px solid #15181c"><td>Gross load</td><td class="n">${fmt(R.gross,2)} t</td></tr></tbody></table>
       ${dl([["Centre of gravity",esc(p.cog)],["Sling legs",`${R.sling.legs} at ${fmt(R.sling.ang,0)}° to vertical (${R.sling.eff} carrying)`],["Tension per leg",fmt(R.sling.tension,2)+" t"],["Lowest gear WLL",R.sling.minWll?fmt(R.sling.minWll,2)+" t":"–"],["Rigging height",fmt(num(p.rigH))+" m"]])}</div>
     <h2>4 · Capacity check</h2>
     <table><thead><tr><th>Position</th><th class="n">Radius</th><th class="n">Chart radius</th><th class="n">Rated</th><th class="n">Gross</th><th class="n">Utilisation</th><th>Result</th></tr></thead><tbody>
       ${[["Pick",R.pick],["Set",R.set]].map(([n,x])=>`<tr><td>${n}</td><td class="n">${fmt(x.R)} m</td><td class="n">${x.cap?fmt(x.chartR)+" m":"–"}</td><td class="n">${x.cap?fmt(x.cap,2)+" t":"<span class='warn'>"+esc(x.why||"–")+"</span>"}</td><td class="n">${fmt(R.gross,2)} t</td><td class="n">${x.cap?fmt(R.gross/x.cap*100,0)+"%":"–"}</td><td>${x.cap?(R.gross>x.cap?"<b class='warn'>EXCEEDS</b>":R.gross/x.cap*100>=R.critPct?"OK – critical":"OK"):"<b class='warn'>NO RATING</b>"}</td></tr>`).join("")}</tbody></table>
-    <p class="small" style="color:#5d5d60">Rated capacity read from the chart at the next tabulated radius at or beyond the working radius, ${R.boom?fmt(R.boom)+" m":""} boom. Critical lift threshold ${R.critPct}% of rated. The crane's load moment indicator and rating book govern on the day.</p>
+    <p class="small" style="color:#5a6270">Rated capacity read from the chart at the next tabulated radius at or beyond the working radius, ${R.boom?fmt(R.boom)+" m":""} boom. Critical lift threshold ${R.critPct}% of rated. The crane's load moment indicator and rating book govern on the day.</p>
     <div class="cols3">
       <div class="box"><b>Height</b>${g&&!g.unreach?dl([["Tip height",fmt(g.tipH)+" m"],["Hook available",fmt(g.hookAvail)+" m"],["Hook needed",fmt(g.hookReq)+" m"],["Result",g.hookOK?"OK":"<b class='warn'>SHORT</b>"]]):"<div class='small'>Not checked – no pivot geometry on the chart.</div>"}</div>
       <div class="box"><b>Boom clearance</b>${g&&g.obstClear!=null?dl([["Obstacle",`${fmt(num(p.obstH))} m high at ${fmt(num(p.obstD))} m`],["Boom height there",fmt(g.boomAtObst)+" m"],["Clearance",fmt(g.obstClear,2)+" m"],["Result",g.obstClear>=num(st.minClear)?"OK":"<b class='warn'>TOO CLOSE</b>"]]):"<div class='small'>No obstacle entered.</div>"}</div>
@@ -507,7 +549,7 @@ function sheetHTML(p){const R=calc(p),c=R.chart,m=R.model,g=R.geom,gr=R.ground,s
     <div class="sign"><div><b>Prepared by</b>${esc(p.preparedBy)}<br>Signature / date</div><div><b>Crane operator</b>${esc(p.operator)}<br>Signature / date</div><div><b>Dogman / rigger</b>${esc(p.dogman)}<br>Signature / date</div><div><b>Lift supervisor</b>${esc(p.liftSupervisor)}<br>Signature / date</div><div><b>${esc(st.company||"Contractor")} approval</b><br>Signature / date</div><div><b>Principal contractor review${R.critical?" (required – critical lift)":""}</b><br>Signature / date</div></div>
     </div><div class="foot">Prepared with the lift planner on ${esc(new Date().toLocaleString("en-AU"))}. Lift to be re-planned if the load, crane configuration, radius, ground or weather differ from this sheet. All lifts to be carried out by licensed personnel in accordance with the rating book, the site's crane procedures and AS 2550.1 / AS 2550.5.</div>
   </div>`}
-function tabDoc(){const p=plan();$("#body").innerHTML="";$("#sheet").innerHTML=`<div class="wrap noprint" style="padding-bottom:0"><div class="row" style="padding:12px 0"><button class="btn primary bp" id="printBtn">${BP}Print / save as PDF</button><button class="btn" id="backBtn">← Back to editing</button><span class="small muted">A4, two pages. In the print dialog choose “Save as PDF”.</span></div></div>${sheetHTML(p)}`}
+function tabDoc(){const p=plan();$("#body").innerHTML="";$("#sheet").innerHTML=`<div class="doctools noprint"><button class="btn" id="backBtn">← Checks</button><button class="btn primary" id="printBtn">Print / save as PDF</button><span class="small muted">A4, two pages. In the print dialog choose “Save as PDF”.</span></div>${sheetHTML(p)}`}
 
 /* ── events ── */
 document.addEventListener("input",e=>{const t=e.target,p=plan();

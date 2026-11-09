@@ -1,6 +1,7 @@
 # Lift planner – Sennebogen cranes
 
 A single-file lift plan tool for Sennebogen telescopic crawler cranes: `public/index.html`, vanilla JS, no build step, no backend.
+The screen is laid out like the document it produces – paper background, navy ink, numbered sections, IBM Plex type – and walks through five steps (Lift, Crane & chart, Load & rigging, Checks, Document) with a results summary pinned under the header.
 Plans and load charts are stored in the browser (`localStorage`); export and import them as JSON to move between devices.
 
 ## What it does
