@@ -2,3 +2,4 @@
 Thumbs.db
 tools/test/out/
 __pycache__/
+.netlify/
