@@ -125,6 +125,12 @@ tr.hit td{background:var(--blue);font-weight:500}
 .pages img{display:block;width:100%;border:1px solid var(--rule-soft);cursor:zoom-in;background:#fff}.pages figure.zoom img{cursor:zoom-out}
 .pages figcaption{font-size:11px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:3px}
 .pages .del{position:absolute;top:4px;right:4px;width:28px;height:28px;border:1px solid var(--red);background:#fff;color:var(--red);cursor:pointer;font-size:12px;line-height:1}
+/* site layout markup */
+.site{position:relative;width:100%;background:var(--paper-2);border:1px solid var(--rule);touch-action:manipulation;user-select:none;-webkit-user-select:none;cursor:crosshair;overflow:hidden}
+.site img{display:block;width:100%;height:100%;object-fit:fill;pointer-events:none}
+.site svg{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
+.tools{margin:10px 0 6px}.tools .btn{min-height:38px}
+.sheet .site{border:1px solid #cfd5dd;cursor:default;margin:6px 0}
 .rig-row{display:grid;grid-template-columns:2fr 1fr 1fr 1fr auto;gap:8px;align-items:end;margin-bottom:8px}
 @media (max-width:560px){.rig-row{grid-template-columns:1fr 1fr 1fr}.rig-row .f:first-child{grid-column:1/-1}}
 /* ── printed plan ── */
@@ -149,6 +155,7 @@ body.preview #body,body.preview .strip{display:none}body.preview #sheet{display:
 .sheet .chk i.on{background:#0b1f3a}
 .sheet .foot{margin-top:10px;font-size:10px;color:#5a6270;border-top:1px solid #cfd5dd;padding-top:6px}
 .sheet .keep{break-inside:avoid}
+.sheet .site{break-inside:avoid}
 .sheet .appendix{break-before:page;margin-top:18px;padding-top:12px;border-top:1px dashed #cfd5dd}
 .sheet figure.attach{margin:8px 0;break-inside:avoid}.sheet img.attach{display:block;max-width:100%;max-height:235mm;border:1px solid #cfd5dd}.sheet figure.attach figcaption{font-size:10.5px;color:#5a6270;margin-top:3px}
 .sheet .n{font-family:var(--mono)}
@@ -172,7 +179,7 @@ body.preview #body,body.preview .strip{display:none}body.preview #sheet{display:
     <div>
       <div class="kicker">Lift plan</div>
       <h1 id="planTitle">Lift plan</h1>
-      <p class="small muted" style="margin:6px 0 0">Work through the five steps. The summary below updates as you type; step 5 is the document to print.</p>
+      <p class="small muted" style="margin:6px 0 0">Work through the six steps. The summary below updates as you type; step 6 is the document to print.</p>
     </div>
     <div class="tb-side">
       <label class="f">Saved plans<select id="planSel"></select></label>
@@ -186,9 +193,10 @@ body.preview #body,body.preview .strip{display:none}body.preview #sheet{display:
   <ol class="steps" id="steps">
     <li><button data-tab="lift"><span class="num">1</span><span class="t">Lift</span></button></li>
     <li><button data-tab="crane"><span class="num">2</span><span class="t">Crane &amp; chart</span></button></li>
-    <li><button data-tab="load"><span class="num">3</span><span class="t">Load &amp; rigging</span></button></li>
-    <li><button data-tab="check"><span class="num">4</span><span class="t">Checks</span></button></li>
-    <li><button data-tab="doc"><span class="num">5</span><span class="t">Document</span></button></li>
+    <li><button data-tab="site"><span class="num">3</span><span class="t">Site layout</span></button></li>
+    <li><button data-tab="load"><span class="num">4</span><span class="t">Load &amp; rigging</span></button></li>
+    <li><button data-tab="check"><span class="num">5</span><span class="t">Checks</span></button></li>
+    <li><button data-tab="doc"><span class="num">6</span><span class="t">Document</span></button></li>
   </ol>
   <div class="progress"><i id="progress"></i></div>
   <div class="strip" id="strip"></div>
@@ -283,6 +291,8 @@ const S={plans:store.get("plans",[]),charts:store.get("charts",null),settings:st
 if(!S.charts){S.charts=[DEMO_CHART];store.set("charts",S.charts)}
 S.charts.forEach(c=>{if(!c.make&&/^\d+E$/.test(c.model||"")){c.make="Sennebogen";c.model=c.model.replace(/E$/," E")}else if(c.model==="other"){c.model=""}if(!c.type)c.type="crawler"});
 S.attach={}; // chart id → [{id,name,dataUrl}] rating-book pages, loaded from IndexedDB at start
+S.site={};   // plan id → {dataUrl,w,h} site image; the markup itself lives on the plan (p.site)
+S.hist={};S.tool="scale";
 function newPlan(){return {id:uid(),createdAt:Date.now(),title:"",liftNo:"",date:today(),time:"",location:"",description:"",
   liftSupervisor:"",operator:"",dogman:"",preparedBy:"",permitNo:"",
   chartId:S.charts[0]?S.charts[0].id:"",boom:null,pickR:8,setR:10,slewDeg:90,
@@ -291,7 +301,7 @@ function newPlan(){return {id:uid(),createdAt:Date.now(),title:"",liftNo:"",date
   legs:2,legAngle:45,allLegs:false,rigH:2.0,
   setLevel:0,clearance:0.5,obstD:"",obstH:"",
   opWeightOvr:"",bearing:"",mats:false,matL:5,matW:1,matN:2,
-  flags:{},checks:{},hazards:"",notes:""}}
+  flags:{},checks:{},hazards:"",notes:"",site:null,nogo:""}}
 function plan(){let p=S.plans.find(x=>x.id===S.planId);if(!p){if(!S.plans.length)S.plans.push(newPlan());p=S.plans[0];S.planId=p.id}return p}
 function save(){const p=plan();p.updatedAt=Date.now();store.set("plans",S.plans);store.set("planId",S.planId);store.set("charts",S.charts);store.set("settings",S.settings)}
 const chartOf=id=>S.charts.find(c=>c.id===id)||null;
@@ -382,12 +392,23 @@ function calc(p){
   const minWll=Math.min(...(p.rig||[]).filter(r=>num(r.wll)>0).map(r=>num(r.wll)));
   if(isFinite(minWll)){R.sling.minWll=minWll;if(R.sling.tension>minWll)R.fails.push(`Leg tension ${fmt(R.sling.tension,2)} t exceeds the lowest gear WLL ${fmt(minWll,2)} t.`)}
   if(c&&num(c.maxWind)>0)R.maxWind=num(c.maxWind);
+  // site layout markup – measured radii, slew, obstacles, exclusion zone and powerlines
+  R.site=siteGeom(p,R);
+  if(R.site){const g=R.site,off=(a,b,t)=>a!=null&&Math.abs(a-b)>t;
+    if(off(g.pickR,num(p.pickR),0.3)||off(g.setR,num(p.setR),0.3))R.warnings.push(`The site layout measures pick ${g.pickR!=null?fmt(g.pickR):"–"} m / set ${g.setR!=null?fmt(g.setR):"–"} m against ${fmt(num(p.pickR))} / ${fmt(num(p.setR))} m in the plan – apply the measured values or correct the markup.`);
+    if(off(g.slew,num(p.slewDeg),5))R.warnings.push(`Slew measured on the site layout is ${fmt(g.slew,0)}°; the plan says ${fmt(num(p.slewDeg),0)}°.`);
+    if(g.worst&&(!(num(p.obstD)>0)||off(g.worst.d,num(p.obstD),0.3)||off(g.worst.h,num(p.obstH),0.3)))R.warnings.push(`Nearest obstacle on the site layout is ${fmt(g.worst.h)} m high at ${fmt(g.worst.d)} m – not the one in the boom clearance check.`);
+    if(g.zoneOK===false)R.fails.push("Part of the load path lies outside the drawn exclusion zone – extend the zone or change the lift.");
+    if(g.lineDist!=null){const ng=num(p.nogo);if(ng>0&&g.lineDist<ng)R.fails.push(`The load path comes within ${fmt(g.lineDist)} m of a powerline – inside the ${fmt(ng)} m no-go zone. Needs the network operator's approval or a different set-up.`);
+      else if(!(ng>0))R.warnings.push("Enter the powerline no-go distance for the voltage and jurisdiction to check the drawn powerline.")}}
   R.ok=R.fails.length===0;return R}
 
 /* ── rating-book pages (IndexedDB – images are too large for localStorage) ── */
 const idb={open(){return new Promise((res,rej)=>{if(!window.indexedDB)return rej(new Error("no IndexedDB"));const r=indexedDB.open("liftplanner",1);r.onupgradeneeded=()=>r.result.createObjectStore("attach");r.onsuccess=()=>res(r.result);r.onerror=()=>rej(r.error)})},
   async tx(mode,fn){const db=await idb.open();return new Promise((res,rej)=>{const t=db.transaction("attach",mode),rq=fn(t.objectStore("attach"));t.oncomplete=()=>{db.close();res(rq&&"result" in rq?rq.result:rq)};t.onerror=()=>{db.close();rej(t.error)}})}};
-async function loadAttachments(){try{const keys=await idb.tx("readonly",st=>st.getAllKeys()),vals=await idb.tx("readonly",st=>st.getAll());keys.forEach((k,i)=>{if(Array.isArray(vals[i]))S.attach[k]=vals[i]})}catch(e){}}
+async function loadAttachments(){try{const keys=await idb.tx("readonly",st=>st.getAllKeys()),vals=await idb.tx("readonly",st=>st.getAll());
+  keys.forEach((k,i)=>{if(typeof k==="string"&&k.startsWith("site:")){if(vals[i]&&vals[i].dataUrl)S.site[k.slice(5)]=vals[i]}else if(Array.isArray(vals[i]))S.attach[k]=vals[i]})}catch(e){}}
+function saveSite(id){const v=S.site[id];return idb.tx("readwrite",st=>v?st.put(v,"site:"+id):st.delete("site:"+id)).catch(()=>toast("The image could not be stored on this device"))}
 function saveAttach(id){const v=S.attach[id];return idb.tx("readwrite",st=>v&&v.length?st.put(v,id):st.delete(id)).catch(()=>toast("The pages could not be stored on this device"))}
 async function addChartFiles(files,id){const list=S.attach[id]||(S.attach[id]=[]);let n=0;
   for(const f of files){const st=$("#fileStatus");if(st)st.textContent=`Reading ${f.name}…`;
@@ -410,12 +431,33 @@ function textToGrid(items){const rows=new Map();items.forEach(it=>{const t=(it.s
   const clean=t=>{const m=t.replace(/,/g,".").match(/^(-?\d+(?:\.\d+)?)\s*(m|t|ft|kg|°)?$/i);return m?m[1]:t};
   return [...rows.entries()].sort((a,b)=>b[0]-a[0]).map(([,cells])=>cells.sort((a,b)=>a.x-b.x).map(c=>clean(c.t)))
     .filter(cells=>cells.filter(t=>/^-?\d+(\.\d+)?$/.test(t)||t==="-"||t==="–").length>=2).map(cells=>cells.join("\t")).join("\n")}
-function shrinkImage(f){return new Promise((res,rej)=>{const url=URL.createObjectURL(f),im=new Image();
-  im.onload=()=>{const k=Math.min(1,1800/Math.max(im.width,im.height)),cv=document.createElement("canvas");cv.width=Math.max(1,Math.round(im.width*k));cv.height=Math.max(1,Math.round(im.height*k));cv.getContext("2d").drawImage(im,0,0,cv.width,cv.height);URL.revokeObjectURL(url);res(cv.toDataURL("image/jpeg",.85))};
+function readImage(f,max=1800){return new Promise((res,rej)=>{const url=URL.createObjectURL(f),im=new Image();
+  im.onload=()=>{const k=Math.min(1,max/Math.max(im.width,im.height)),cv=document.createElement("canvas");cv.width=Math.max(1,Math.round(im.width*k));cv.height=Math.max(1,Math.round(im.height*k));cv.getContext("2d").drawImage(im,0,0,cv.width,cv.height);URL.revokeObjectURL(url);res({dataUrl:cv.toDataURL("image/jpeg",.85),w:cv.width,h:cv.height})};
   im.onerror=()=>{URL.revokeObjectURL(url);rej(new Error("the image could not be read"))};im.src=url})}
+const shrinkImage=f=>readImage(f).then(r=>r.dataUrl);
+async function readSiteFile(f){if(f.type==="application/pdf"||/\.pdf$/i.test(f.name)){const pdfjs=await loadPdfjs();const doc=await pdfjs.getDocument({data:await f.arrayBuffer()}).promise;const pg=await doc.getPage(1);
+    const v0=pg.getViewport({scale:1});const vp=pg.getViewport({scale:Math.min(3,2000/Math.max(v0.width,v0.height))});const cv=document.createElement("canvas");cv.width=Math.round(vp.width);cv.height=Math.round(vp.height);
+    await pg.render({canvasContext:cv.getContext("2d"),viewport:vp}).promise;return {dataUrl:cv.toDataURL("image/jpeg",.85),w:cv.width,h:cv.height}}
+  if(f.type.startsWith("image/"))return readImage(f,2000);throw new Error("not a PDF or an image")}
 function gridFromText(txt){txt=txt.replace(/^﻿/,"");if(!/\t/.test(txt)&&/[,;]/.test(txt))txt=txt.replace(/[,;]/g,"\t");return txt.trim()}
 function appendixHTML(c){const att=c&&S.attach[c.id]||[];if(!att.length)return "";
   return `<div class="appendix"><h2>Appendix · Load chart source</h2><p class="small" style="color:#5a6270">${esc(craneName(c))} · ${esc(c.name)}${c.source?" · "+esc(c.source):""}. Pages as uploaded by the planner – the manufacturer's rating book and the crane's LMI govern.</p>${att.map(a=>`<figure class="attach"><img class="attach" src="${a.dataUrl}" alt="${esc(a.name)}"><figcaption>${esc(a.name)}</figcaption></figure>`).join("")}</div>`}
+
+/* ── site layout: measured geometry ── */
+const inPoly=(pt,poly)=>{let inside=false;for(let i=0,j=poly.length-1;i<poly.length;j=i++){const a=poly[i],b=poly[j];if((a.y>pt.y)!==(b.y>pt.y)&&pt.x<(b.x-a.x)*(pt.y-a.y)/(b.y-a.y)+a.x)inside=!inside}return inside};
+const segDist=(p,a,b)=>{const dx=b.x-a.x,dy=b.y-a.y,l2=dx*dx+dy*dy;const t=l2?Math.max(0,Math.min(1,((p.x-a.x)*dx+(p.y-a.y)*dy)/l2)):0;return Math.hypot(p.x-(a.x+t*dx),p.y-(a.y+t*dy))};
+const siteScale=s=>s&&s.scale&&s.scale.a&&s.scale.b&&num(s.scale.m)>0?Math.hypot(s.scale.b.x-s.scale.a.x,s.scale.b.y-s.scale.a.y)/num(s.scale.m):0;  // px per metre
+function siteGeom(p,R){const s=p.site,kpx=siteScale(s);if(!kpx||!s.crane)return null;
+  const d=(a,b)=>Math.hypot(a.x-b.x,a.y-b.y)/kpx,ang=a=>Math.atan2(a.y-s.crane.y,a.x-s.crane.x),g={kpx,path:[]};
+  if(s.pick)g.pickR=d(s.crane,s.pick);if(s.set)g.setR=d(s.crane,s.set);
+  if(s.pick&&s.set){const a0=ang(s.pick);let da=ang(s.set)-a0;da=Math.atan2(Math.sin(da),Math.cos(da));g.slew=Math.abs(da)*180/Math.PI;
+    for(let i=0;i<=24;i++){const t=i/24,r=(g.pickR+(g.setR-g.pickR)*t)*kpx,a=a0+da*t;g.path.push({x:s.crane.x+r*Math.cos(a),y:s.crane.y+r*Math.sin(a)})}}
+  g.obst=(s.obst||[]).map(o=>{const out={d:d(s.crane,o),h:num(o.h)};
+    if(R.geom&&!R.geom.unreach&&out.h>0&&out.d<R.govR){const t=Math.tan(R.geom.angle*Math.PI/180);out.boomH=num(R.chart.pivotH)+(out.d-num(R.chart.pivotX))*t;out.clear=out.boomH-out.h}return out});
+  g.worst=g.obst.filter(o=>o.clear!=null).sort((a,b)=>a.clear-b.clear)[0]||g.obst.filter(o=>o.h>0).sort((a,b)=>a.d-b.d)[0]||null;
+  if(s.zone&&s.zone.length>=3&&g.path.length)g.zoneOK=g.path.every(pt=>inPoly(pt,s.zone));
+  if(s.lines&&s.lines.length&&g.path.length)g.lineDist=Math.min(...s.lines.map(l=>Math.min(...g.path.map(pt=>segDist(pt,l.a,l.b)))))/kpx;
+  return g}
 
 /* ── rendering ── */
 function field(k,label,type,attrs,v){const p=plan();const val=v!==undefined?v:(p[k]==null?"":p[k]);
@@ -427,11 +469,11 @@ function render(){const p=plan();$("#planTitle").textContent=planName(p);
   $("#progress").style.width=((si+1)/STEPS.length*100)+"%";
   $("#docRef").textContent=[p.liftNo,p.date].filter(Boolean).join(" · ");
   document.body.classList.toggle("preview",S.tab==="doc");
-  ({lift:tabLift,crane:tabCrane,load:tabLoad,check:tabCheck,doc:tabDoc})[S.tab]();
+  ({lift:tabLift,crane:tabCrane,site:tabSite,load:tabLoad,check:tabCheck,doc:tabDoc})[S.tab]();
   if(S.tab!=="doc"){const prev=STEPS[si-1],next=STEPS[si+1];
     $("#body").insertAdjacentHTML("beforeend",`<div class="stepnav">${prev?`<button class="btn" data-tab="${prev[0]}">← ${esc(prev[1])}</button>`:""}${next?`<button class="btn primary next" data-tab="${next[0]}">${esc(next[1])} →</button>`:""}</div>`)}
   renderStrip()}
-const STEPS=[["lift","Lift"],["crane","Crane & chart"],["load","Load & rigging"],["check","Checks"],["doc","Document"]];
+const STEPS=[["lift","Lift"],["crane","Crane & chart"],["site","Site layout"],["load","Load & rigging"],["check","Checks"],["doc","Document"]];
 function renderStrip(){const R=calc(plan());const cls=R.fails.length?"warn":R.critical?"crit":"ok";
   $("#strip").innerHTML=`<div class="in"><div><div class="k">Gross load</div><div class="v">${fmt(R.gross,2)} t</div></div><div><div class="k">Rated at ${fmt(R.gov.chartR||R.govR)} m</div><div class="v">${R.cap?fmt(R.cap,2)+" t":"–"}</div></div><div><div class="k">Utilisation</div><div class="v ${R.pct>100?"warn":""}">${R.pct!=null?fmt(R.pct,0)+"%":"–"}</div></div><div class="verdict"><span class="pill ${cls}">${R.fails.length?"Not OK":R.critical?"Critical lift":"Standard lift"}</span></div></div>`;
   if(S.tab!=="doc")$("#sheet").innerHTML=""}
@@ -507,8 +549,78 @@ function chartForm(c){const f=(k,l,t,a)=>`<label class="f">${l}<input data-c="${
     <div class="row" style="margin-top:12px"><button class="btn primary" id="saveChart">Save chart</button><button class="btn" id="cancelChart">Cancel</button></div>
     <p class="small muted" style="margin-top:8px">Geometry fields are optional but needed for the hook-height, clearance and ground checks. Pivot offset is positive when the boom foot sits behind the centre of rotation.${outr?` Ground pressure assumes ${PAD_SHARE*100} % of crane plus load on one pad.`:""}</p>`}
 
+const TOOLS=[["scale","Scale"],["crane","Crane"],["pick","Pick"],["set","Set"],["obst","Obstacle"],["zone","Exclusion zone"],["line","Powerline"],["erase","Erase"]];
+const HINTS={scale:"Click two points a known distance apart – a track or outrigger spread, a panel, a grid line – then enter the distance in metres.",crane:"Click the crane's centre of rotation. Click again to move it.",pick:"Click where the load is picked up (its centre of gravity).",set:"Click where the load is set down.",obst:"Click each obstacle the boom or load passes over, then enter its height below.",zone:"Click around the exclusion zone; the polygon closes itself. Erase a corner to adjust it.",line:"Click both ends of a powerline. Enter the no-go distance below the image.",erase:"Click a marker to remove it."};
+function tabSite(){const p=plan(),R=calc(p),img=S.site[p.id],s=p.site||{},g=R.site;
+  $("#body").innerHTML=`<div class="card"><div class="kicker">03</div><h3>Site layout</h3>
+  <p class="small muted">Upload a photo, drone shot, site drawing or a view from the 3D model of the lifting area and mark it up: set the scale from a known distance, place the crane's slew centre, the pick and set points, obstacles, the exclusion zone and any powerlines. Radii, slew and obstacle positions are measured from the markup and compared with the plan, and the marked-up image prints on the lift plan.</p>
+  ${img?`<div class="row tools" id="tools">${TOOLS.map(([k,l])=>`<button class="btn small ${S.tool===k?"primary":""}" data-tool="${k}">${l}</button>`).join("")}<span class="sp"></span><button class="btn small" id="siteUndo">Undo</button><button class="btn small warn" id="siteClear">Clear markup</button></div>
+    <p class="small muted" id="toolHint" style="margin:0 0 8px">${!siteScale(s)&&S.tool!=="scale"?"Set the scale first – ":""}${HINTS[S.tool]}${S.lineStart?" (first end placed)":""}</p>
+    ${s.scale&&s.scale.a&&s.scale.b&&!(num(s.scale.m)>0)?`<div class="row" style="margin-bottom:8px"><label class="f" style="width:220px">Distance between the two points (m)<input id="scaleM" type="number" inputmode="decimal" step="0.1" min="0"></label><button class="btn small primary" id="scaleSet">Set scale</button></div>`:""}
+    <div class="site" id="site" style="aspect-ratio:${img.w}/${img.h}"><img src="${img.dataUrl}" alt="Site layout" draggable="false">${siteSVG(p,R,img)}</div>
+    ${(s.obst||[]).length?`<div class="kicker" style="margin-top:12px">Obstacles</div>${s.obst.map((o,i)=>`<div class="row" style="margin:6px 0"><span class="small" style="min-width:150px">Obstacle ${i+1}${g?` · ${fmt(g.obst[i].d)} m from the crane`:""}</span><label class="f" style="width:150px">Height (m)<input data-obsth="${i}" type="number" inputmode="decimal" step="0.1" min="0" value="${esc(o.h==null?"":o.h)}"></label></div>`).join("")}`:""}
+    <div class="grid" style="margin-top:12px">${field("nogo","Powerline no-go distance (m)","number",'step="0.1" min="0" placeholder="per voltage and jurisdiction"')}</div>
+    <div class="row" style="margin-top:12px"><label class="btn small" for="siteFile">Replace image</label><button class="btn small warn" id="siteRemove">Remove image</button></div>`
+  :`<div class="row"><label class="btn primary" for="siteFile">Upload the site image (PDF, JPG, PNG)</label></div><p class="small muted">A plan view, a drone shot straight down or a drawing measures best – a photo taken at an angle foreshortens distances.</p>`}
+  <input type="file" id="siteFile" accept="application/pdf,image/*" class="hidden">
+  </div>
+  ${img?`<div class="card"><div class="kicker">Measured from the markup</div><h3>Findings</h3>${g?`<div class="tablewrap">${findingsTable(p,R)}</div>
+    <div class="row"><button class="btn primary" id="applySite">Apply the measured radii, slew and obstacle to the plan</button></div>`:`<p class="small muted">${siteScale(s)?"Place the crane's slew centre to start measuring.":"Set the scale – nothing can be measured without it."}</p>`}
+    <p class="small muted" style="margin-top:8px">Measurements follow the scale you set, so prefer a plan view or a straight-down drone shot. Boom clearance over the nearest obstacle is checked on the Checks step; the powerline no-go distance depends on voltage and jurisdiction – take it from the network operator or the site rules.</p></div>`:""}`}
+function findingsTable(p,R){const g=R.site;if(!g)return "";
+  const row=(k,m,pl,ok)=>`<tr><td>${k}</td><td class="n">${m}</td><td class="n">${pl}</td><td>${ok==null?"–":ok?"<span class='ok'>matches</span>":"<b class='warn'>differs</b>"}</td></tr>`;
+  const near=(a,b,t)=>a==null?null:Math.abs(a-b)<=t;
+  return `<table><thead><tr><th>Item</th><th class="n">Site layout</th><th class="n">Plan</th><th>Check</th></tr></thead><tbody>
+    ${row("Pick radius",g.pickR!=null?fmt(g.pickR)+" m":"–",fmt(num(p.pickR))+" m",near(g.pickR,num(p.pickR),0.3))}
+    ${row("Set radius",g.setR!=null?fmt(g.setR)+" m":"–",fmt(num(p.setR))+" m",near(g.setR,num(p.setR),0.3))}
+    ${row("Slew",g.slew!=null?fmt(g.slew,0)+"°":"–",fmt(num(p.slewDeg),0)+"°",near(g.slew,num(p.slewDeg),5))}
+    ${g.worst?row("Nearest obstacle",`${fmt(g.worst.h)} m high at ${fmt(g.worst.d)} m`,num(p.obstD)>0?`${fmt(num(p.obstH))} m at ${fmt(num(p.obstD))} m`:"–",num(p.obstD)>0?near(g.worst.d,num(p.obstD),0.3)&&near(g.worst.h,num(p.obstH),0.3):false):""}
+    ${g.zoneOK!=null?row("Exclusion zone",g.zoneOK?"load path inside":"load path outside","–",g.zoneOK):""}
+    ${g.lineDist!=null?row("Powerline",fmt(g.lineDist)+" m from the load path",num(p.nogo)>0?fmt(num(p.nogo))+" m no-go":"no-go not set",num(p.nogo)>0?g.lineDist>=num(p.nogo):null):""}
+  </tbody></table>`}
+function siteSVG(p,R,img){const s=p.site||{},W=img.w,H=img.h,sw=Math.max(1.2,W/500),fs=Math.max(11,W/46),g=R.site,k=g?g.kpx:0,halo=`paint-order="stroke" stroke="#fff" stroke-width="${sw*2.5}" stroke-linejoin="round"`;
+  const lbl=(x,y,t,col,anchor="middle",size=fs)=>`<text x="${x}" y="${y}" text-anchor="${anchor}" font-size="${size}" font-weight="600" fill="${col}" ${halo}>${esc(t)}</text>`;
+  const mk=(pt,t,col)=>`<circle cx="${pt.x}" cy="${pt.y}" r="${fs*0.85}" fill="#fff" stroke="${col}" stroke-width="${sw*1.5}"/><text x="${pt.x}" y="${pt.y+fs*0.36}" text-anchor="middle" font-size="${fs}" font-weight="700" fill="${col}">${t}</text>`;
+  let o=`<svg viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg" font-family="IBM Plex Sans,Arial,sans-serif">`;
+  if(s.zone&&s.zone.length){o+=`<polygon points="${s.zone.map(z=>z.x+","+z.y).join(" ")}" fill="rgba(179,38,30,.14)" stroke="#b3261e" stroke-width="${sw*1.6}" stroke-dasharray="${sw*6} ${sw*4}"/>${s.zone.map(z=>`<circle cx="${z.x}" cy="${z.y}" r="${sw*2.6}" fill="#b3261e"/>`).join("")}`;
+    if(s.zone.length>=3){const cx=s.zone.reduce((a,z)=>a+z.x,0)/s.zone.length,cy=s.zone.reduce((a,z)=>a+z.y,0)/s.zone.length;o+=lbl(cx,cy,"EXCLUSION ZONE","#b3261e")}}
+  (s.lines||[]).forEach(l=>{o+=`<line x1="${l.a.x}" y1="${l.a.y}" x2="${l.b.x}" y2="${l.b.y}" stroke="#b3261e" stroke-width="${sw*2.2}" stroke-dasharray="${sw*9} ${sw*3} ${sw*2} ${sw*3}"/>`+lbl((l.a.x+l.b.x)/2,(l.a.y+l.b.y)/2-fs*0.6,"POWERLINE","#b3261e")});
+  if(S.lineStart&&S.tab==="site")o+=`<circle cx="${S.lineStart.x}" cy="${S.lineStart.y}" r="${sw*3}" fill="#b3261e"/>`;
+  if(s.scale&&s.scale.a){const a=s.scale.a,b=s.scale.b||a;o+=`<line x1="${a.x}" y1="${a.y}" x2="${b.x}" y2="${b.y}" stroke="#1f6b4a" stroke-width="${sw*1.6}"/><circle cx="${a.x}" cy="${a.y}" r="${sw*2.6}" fill="#1f6b4a"/><circle cx="${b.x}" cy="${b.y}" r="${sw*2.6}" fill="#1f6b4a"/>`+(num(s.scale.m)>0?lbl((a.x+b.x)/2,(a.y+b.y)/2-fs*0.5,fmt(num(s.scale.m))+" m","#1f6b4a"):"")}
+  if(s.crane){const c=s.crane;
+    if(k){const maxR=Math.max(g.pickR||0,g.setR||0,5)*1.3,step=maxR>40?10:maxR>16?5:2;
+      for(let r=step;r<=maxR;r+=step)o+=`<circle cx="${c.x}" cy="${c.y}" r="${r*k}" fill="none" stroke="#0b1f3a" stroke-opacity=".5" stroke-width="${sw*0.7}" stroke-dasharray="${sw*3} ${sw*3}"/>`+lbl(c.x+r*k+sw*2,c.y-sw*2,String(r),"#0b1f3a","start",fs*0.8);
+      if(g.path.length)o+=`<polyline points="${g.path.map(q=>q.x.toFixed(1)+","+q.y.toFixed(1)).join(" ")}" fill="none" stroke="#0b1f3a" stroke-width="${sw*1.6}"/>`}
+    if(s.pick)o+=`<line x1="${c.x}" y1="${c.y}" x2="${s.pick.x}" y2="${s.pick.y}" stroke="#0b1f3a" stroke-width="${sw*1.4}"/>`;
+    if(s.set)o+=`<line x1="${c.x}" y1="${c.y}" x2="${s.set.x}" y2="${s.set.y}" stroke="#0b1f3a" stroke-width="${sw*1.4}" stroke-dasharray="${sw*5} ${sw*3}"/>`;
+    o+=`<rect x="${c.x-fs*0.9}" y="${c.y-fs*0.9}" width="${fs*1.8}" height="${fs*1.8}" fill="#fff" stroke="#0b1f3a" stroke-width="${sw*1.6}"/><line x1="${c.x-fs*0.9}" y1="${c.y}" x2="${c.x+fs*0.9}" y2="${c.y}" stroke="#0b1f3a" stroke-width="${sw}"/><line x1="${c.x}" y1="${c.y-fs*0.9}" x2="${c.x}" y2="${c.y+fs*0.9}" stroke="#0b1f3a" stroke-width="${sw}"/>`+lbl(c.x,c.y+fs*2.1,"CRANE","#0b1f3a")}
+  if(s.pick)o+=mk(s.pick,"P","#0b1f3a")+lbl(s.pick.x,s.pick.y-fs*1.2,"PICK"+(g&&g.pickR!=null?" "+fmt(g.pickR)+" m":""),"#0b1f3a");
+  if(s.set)o+=mk(s.set,"S","#0b1f3a")+lbl(s.set.x,s.set.y-fs*1.2,"SET"+(g&&g.setR!=null?" "+fmt(g.setR)+" m":""),"#0b1f3a");
+  (s.obst||[]).forEach((ob,i)=>{const r=fs*0.9;o+=`<polygon points="${ob.x},${ob.y-r} ${ob.x+r},${ob.y+r*0.8} ${ob.x-r},${ob.y+r*0.8}" fill="#fff" stroke="#b3261e" stroke-width="${sw*1.5}"/>`+lbl(ob.x,ob.y+r*1.9+fs*0.4,`${i+1}${num(ob.h)>0?" · "+fmt(num(ob.h))+" m":""}`,"#b3261e")});
+  return o+"</svg>"}
+function sitePoint(e){const p=plan(),img=S.site[p.id],el=$("#site");if(!img||!el)return null;const r=el.getBoundingClientRect();
+  return {x:+Math.max(0,Math.min(img.w,(e.clientX-r.left)/r.width*img.w)).toFixed(1),y:+Math.max(0,Math.min(img.h,(e.clientY-r.top)/r.height*img.h)).toFixed(1)}}
+function pushHist(p){const h=S.hist[p.id]||(S.hist[p.id]=[]);h.push(JSON.stringify(p.site||{}));if(h.length>40)h.shift()}
+function eraseNear(s,pt,tol){const cands=[];(s.obst||[]).forEach((o,i)=>cands.push({d:Math.hypot(o.x-pt.x,o.y-pt.y),del:()=>s.obst.splice(i,1)}));(s.zone||[]).forEach((z,i)=>cands.push({d:Math.hypot(z.x-pt.x,z.y-pt.y),del:()=>s.zone.splice(i,1)}));
+  (s.lines||[]).forEach((l,i)=>cands.push({d:Math.min(Math.hypot(l.a.x-pt.x,l.a.y-pt.y),Math.hypot(l.b.x-pt.x,l.b.y-pt.y)),del:()=>s.lines.splice(i,1)}));
+  ["crane","pick","set"].forEach(k=>{if(s[k])cands.push({d:Math.hypot(s[k].x-pt.x,s[k].y-pt.y),del:()=>{delete s[k]}})});
+  if(s.scale&&s.scale.a)cands.push({d:Math.min(Math.hypot(s.scale.a.x-pt.x,s.scale.a.y-pt.y),s.scale.b?Math.hypot(s.scale.b.x-pt.x,s.scale.b.y-pt.y):1e9),del:()=>{delete s.scale}});
+  const hit=cands.filter(c=>c.d<=tol).sort((a,b)=>a.d-b.d)[0];if(hit){hit.del();return true}return false}
+function siteClick(e){const p=plan(),pt=sitePoint(e);if(!pt)return;const s=p.site||(p.site={});pushHist(p);
+  switch(S.tool){
+    case "scale":if(!s.scale||s.scale.b)s.scale={a:pt};else s.scale.b=pt;break;
+    case "crane":s.crane=pt;break;case "pick":s.pick=pt;break;case "set":s.set=pt;break;
+    case "obst":(s.obst=s.obst||[]).push({x:pt.x,y:pt.y,h:""});break;
+    case "zone":(s.zone=s.zone||[]).push(pt);break;
+    case "line":if(S.lineStart){(s.lines=s.lines||[]).push({a:S.lineStart,b:pt});S.lineStart=null}else S.lineStart=pt;break;
+    case "erase":if(!eraseNear(s,pt,S.site[p.id].w/50)){S.hist[p.id].pop();return}break}
+  save();render();const el=$("#site");if(el&&S.tool==="scale"&&s.scale&&s.scale.b&&!(num(s.scale.m)>0)){const m=$("#scaleM");if(m)m.focus()}}
+function siteHTML(p,R,n){const img=S.site[p.id];if(!img)return "";const g=R.site,tall=img.h/img.w,w=tall>1.25?`${Math.round(125/tall)}mm`:"100%";
+  return `<div class="keep"><h2>${n} · Site layout</h2><div class="site" style="width:${w};aspect-ratio:${img.w}/${img.h}"><img src="${img.dataUrl}" alt="Site layout">${siteSVG(p,R,img)}</div>
+  ${g?findingsTable(p,R):`<p class="small" style="color:#5a6270">Image for reference – no scale set, so nothing was measured from it.</p>`}</div>`}
+
 function tabLoad(){const p=plan(),R=calc(p);
-  $("#body").innerHTML=`<div class="card"><div class="kicker">03</div><h3>Load</h3><div class="grid">
+  $("#body").innerHTML=`<div class="card"><div class="kicker">04</div><h3>Load</h3><div class="grid">
     ${field("loadMass","Load mass (t)","number",'step="0.01" min="0"')}
     <label class="f">Weight source<select data-k="loadSource">${[["verified","Verified – weighbridge / supplier"],["calculated","Calculated from drawings"],["estimated","Estimated"]].map(([k,l])=>`<option value="${k}" ${p.loadSource===k?"selected":""}>${l}</option>`).join("")}</select></label>
     ${field("allowPct","Allowance for unknowns (%)","number",'step="1" min="0"')}
@@ -530,7 +642,7 @@ function tabLoad(){const p=plan(),R=calc(p);
       <tr class="hit"><td>Gross load</td><td class="n">${fmt(R.gross,2)} t</td></tr></tbody></table></div></div>`}
 
 function tabCheck(){const p=plan(),R=calc(p),c=R.chart,g=R.geom,gr=R.ground;
-  $("#body").innerHTML=`<div class="card"><div class="kicker">04</div><h3>Capacity</h3>
+  $("#body").innerHTML=`<div class="card"><div class="kicker">05</div><h3>Capacity</h3>
     <div class="kpis"><div class="kpi"><div class="kicker">Gross load</div><div class="v">${fmt(R.gross,2)} <small>t</small></div></div><div class="kpi"><div class="kicker">Rated · ${esc(R.gov===R.pick?"pick":"set")} at ${fmt(R.gov.chartR||R.govR)} m</div><div class="v">${R.cap?fmt(R.cap,2)+" <small>t</small>":"–"}</div></div><div class="kpi ${R.pct>100?"bad":R.pct>=R.critPct?"":"good"}"><div class="kicker">Utilisation</div><div class="v">${R.pct!=null?fmt(R.pct,0)+"%":"–"}</div>${R.pct!=null?`<div class="bar"><i class="${R.pct>100?"bad":""}" style="width:${Math.min(100,R.pct)}%"></i><b style="left:${R.critPct}%"></b></div>`:""}</div><div class="kpi"><div class="kicker">Margin</div><div class="v">${R.cap?fmt(R.cap-R.gross,2)+" <small>t</small>":"–"}</div></div></div>
     ${R.fails.map(f=>`<div class="notice warn">✕ ${esc(f)}</div>`).join("")}${R.warnings.map(w=>`<div class="notice">△ ${esc(w)}</div>`).join("")}
     <p class="small muted">Rated capacity is the chart figure at the next tabulated radius at or beyond the working radius, for the selected boom length. The crane's LMI and the rating book govern on the day.</p></div>
@@ -557,36 +669,57 @@ function craneBasePlan(c,cx,cy,k){
   return `<rect x="${cx-gauge/2-tw/2}" y="${cy-tl/2}" width="${tw}" height="${tl}" fill="#6b7f99" opacity=".5"/><rect x="${cx+gauge/2-tw/2}" y="${cy-tl/2}" width="${tw}" height="${tl}" fill="#6b7f99" opacity=".5"/><rect x="${cx-gauge/2}" y="${cy-tl*0.28}" width="${gauge}" height="${tl*0.56}" fill="#0b1f3a" opacity=".85"/>`}
 function craneBaseElev(c,X,Y,k){
   if(c&&c.type==="outrigger"){const b=num(c.outBase)||7,pad=num(c.padL)||0.6;
-    return `<rect x="${X(-b/2-0.6)}" y="${Y(1.5)}" width="${(b+1.2)*k}" height="${1.0*k}" fill="#6b7f99" opacity=".6"/>${[-1,1].map(i=>`<rect x="${X(i*b/2-0.12)}" y="${Y(1.2)}" width="${0.24*k}" height="${1.05*k}" fill="#0b1f3a"/><rect x="${X(i*b/2-pad/2)}" y="${Y(0.15)}" width="${pad*k}" height="${0.15*k}" fill="#0b1f3a"/>`).join("")}`}
-  const tl=c&&c.trackLen||7;return `<rect x="${X(-tl/2)}" y="${Y(1.1)}" width="${tl*k}" height="${1.1*k}" fill="#6b7f99" opacity=".6"/>`}
+    return `<rect x="${X(-b/2-0.6)}" y="${Y(1.5)}" width="${(b+1.2)*k}" height="${1.0*k}" fill="#6b7f99" stroke="#0b1f3a" stroke-width=".8"/>${[-b/2+0.9,-b/4,b/4,b/2-0.9].map(x=>`<circle cx="${X(x)}" cy="${Y(0.55)}" r="${0.55*k}" fill="#35506f" stroke="#0b1f3a" stroke-width=".7"/>`).join("")}${[-1,1].map(i=>`<rect x="${X(i*b/2-0.12)}" y="${Y(1.2)}" width="${0.24*k}" height="${1.05*k}" fill="#0b1f3a"/><rect x="${X(i*b/2-pad/2)}" y="${Y(0.15)}" width="${pad*k}" height="${0.15*k}" fill="#0b1f3a"/>`).join("")}`}
+  const tl=c&&c.trackLen||7,n=Math.max(3,Math.round(tl/1.2));return `<rect x="${X(-tl/2)}" y="${Y(1.1)}" width="${tl*k}" height="${1.1*k}" rx="${0.5*k}" fill="#6b7f99" stroke="#0b1f3a" stroke-width=".8"/>${Array.from({length:n},(_,i)=>`<circle cx="${X(-tl/2+0.6+i*(tl-1.2)/(n-1))}" cy="${Y(0.5)}" r="${0.3*k}" fill="#dfe7f0" stroke="#0b1f3a" stroke-width=".6"/>`).join("")}`}
 function sketchPlan(p,R){const W=360,H=300,cx=W/2,cy=H/2,c=R.chart;const maxR=Math.max(num(p.pickR),num(p.setR),6)*1.25;const k=(Math.min(W,H)/2-14)/maxR;
   const pos=(r,deg)=>{const a=(deg-90)*Math.PI/180;return [cx+r*k*Math.cos(a),cy+r*k*Math.sin(a)]};
-  const [px,py]=pos(num(p.pickR),0),[sx,sy]=pos(num(p.setR),num(p.slewDeg));const lw=Math.max(num(p.loadL),1)*k,lh=Math.max(num(p.loadW),1)*k;
+  const pr=num(p.pickR),sr=num(p.setR),slew=num(p.slewDeg);const [px,py]=pos(pr,0),[sx,sy]=pos(sr,slew);const lw=Math.max(num(p.loadL),1)*k,lh=Math.max(num(p.loadW),1)*k;
   const rings=[2,4,6,8,10,12,14,16,18,20,24,28,32,36,40,48,56,64].filter(r=>r<=maxR);
+  const path=Array.from({length:25},(_,i)=>pos(pr+(sr-pr)*i/24,slew*i/24).map(v=>v.toFixed(1)).join(",")).join(" ");
   return `<svg class="sketch" viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg" font-family="IBM Plex Sans,Arial,sans-serif" font-size="10">
     ${rings.map(r=>`<circle cx="${cx}" cy="${cy}" r="${r*k}" fill="none" stroke="#9aa3ae" stroke-width=".5" stroke-dasharray="3 3"/><text x="${cx+3}" y="${cy+r*k-2}" fill="#7c8696">${r}</text>`).join("")}
     ${craneBasePlan(c,cx,cy,k)}
     <path d="M${cx},${cy} L${px},${py}" stroke="#0b1f3a" stroke-width="3"/><path d="M${cx},${cy} L${sx},${sy}" stroke="#0b1f3a" stroke-width="3" stroke-dasharray="6 4"/>
-    <path d="M${pos(Math.min(num(p.pickR),num(p.setR))*0.5,0).join(",")} A${Math.min(num(p.pickR),num(p.setR))*0.5*k},${Math.min(num(p.pickR),num(p.setR))*0.5*k} 0 ${num(p.slewDeg)>180?1:0} 1 ${pos(Math.min(num(p.pickR),num(p.setR))*0.5,num(p.slewDeg)).join(",")}" fill="none" stroke="#b3261e" stroke-width="1"/>
-    <rect x="${px-lw/2}" y="${py-lh/2}" width="${lw}" height="${lh}" fill="#dfe7f0" stroke="#0b1f3a"/><text x="${px}" y="${py-lh/2-4}" text-anchor="middle" fill="#15181c" font-weight="600">PICK ${fmt(num(p.pickR))} m</text>
-    <rect x="${sx-lw/2}" y="${sy-lh/2}" width="${lw}" height="${lh}" fill="none" stroke="#0b1f3a" stroke-dasharray="4 3"/><text x="${sx}" y="${sy+lh/2+11}" text-anchor="middle" fill="#15181c" font-weight="600">SET ${fmt(num(p.setR))} m</text>
-    <text x="6" y="${H-6}" fill="#7c8696">Plan · slew ${fmt(num(p.slewDeg),0)}° · rings in metres</text></svg>`}
-function sketchElev(p,R){const W=360,H=300,c=R.chart,g=R.geom;const Rg=R.govR;const L=g&&g.L||(c?c.booms[R.bi]:20);
-  const tipH=g&&!g.unreach?g.tipH:L*0.8;const spanX=Math.max(Rg+6,L*0.6+6),spanY=Math.max(tipH+4,10);const k=Math.min((W-40)/spanX,(H-40)/spanY);
-  const gx=20,gy=H-20;const X=x=>gx+x*k,Y=y=>gy-y*k;const pivX=c?num(c.pivotX):1,pivH=c?num(c.pivotH):2;
-  const dx=Rg-pivX,ok=g&&!g.unreach;const tx=ok?Rg:pivX+L*0.6,ty=ok?tipH:pivH+L*0.8;
-  const hookY=ok?Math.max(0,num(p.setLevel)+num(p.loadH)+num(p.rigH)):ty-2;const loadTop=num(p.setLevel)+num(p.loadH),loadH=Math.max(num(p.loadH),0.5),loadL=Math.max(num(p.loadL),1);
-  const od=num(p.obstD),oh=num(p.obstH);
+    <polyline points="${path}" fill="none" stroke="#b3261e" stroke-width="1.5" stroke-dasharray="5 3"/>
+    <rect x="${px-lw/2}" y="${py-lh/2}" width="${lw}" height="${lh}" fill="#dfe7f0" stroke="#0b1f3a"/><text x="${px}" y="${py-lh/2-4}" text-anchor="middle" fill="#15181c" font-weight="600">PICK ${fmt(pr)} m</text>
+    <rect x="${sx-lw/2}" y="${sy-lh/2}" width="${lw}" height="${lh}" fill="none" stroke="#0b1f3a" stroke-dasharray="4 3"/><text x="${sx}" y="${sy+lh/2+11}" text-anchor="middle" fill="#15181c" font-weight="600">SET ${fmt(sr)} m</text>
+    <text x="6" y="${H-6}" fill="#7c8696">Plan · slew ${fmt(slew,0)}° · load path dashed red · rings in metres</text></svg>`}
+/* Elevation drawn to scale from the chart geometry: base, superstructure, counterweight, telescopic boom,
+   hoist rope and hook block, rigging, load, set-down level and obstacle, with the governing dimensions. */
+function sketchElev(p,R){const W=400,H=300,c=R.chart,g=R.geom,Rg=R.govR,L=g&&g.L||(c?c.booms[R.bi]:20),ok=!!(g&&!g.unreach);
+  const pivX=c?num(c.pivotX):1,pivH=c?num(c.pivotH):2,outr=!!(c&&c.type==="outrigger"),baseH=outr?1.5:1.1;
+  const tipH=ok?g.tipH:pivH+L*0.8,tipX=ok?Rg:-pivX+L*0.6;
+  const od=num(p.obstD),oh=num(p.obstH),setL=Math.max(0,num(p.setLevel)),loadH=Math.max(num(p.loadH),0.5),loadL=Math.max(num(p.loadL),1),rigH=Math.max(num(p.rigH),0.5),hl=c?Math.max(num(c.hookLen),0.8):1;
+  const tail=outr?(num(c.outBase)||7)/2+1:4.5,front=Math.max(Rg+loadL/2+1.5,tipX+1.5,od>0?od+2:0,6);
+  const spanX=tail+front+2,spanY=Math.max(tipH+2.5,oh+2,10);const k=Math.min((W-44)/spanX,(H-46)/spanY);const gx=12+tail*k,gy=H-32;const X=x=>gx+x*k,Y=y=>gy-y*k;
+  const hookY=ok?Math.max(0,setL+loadH+rigH):tipH-hl-1;
+  // telescopic boom as nested sections, drawn tip first so the base section sits on top
+  const bx0=X(-pivX),by0=Y(pivH),bx1=X(tipX),by1=Y(tipH),Lpx=Math.hypot(bx1-bx0,by1-by0),ux=(bx1-bx0)/Lpx,uy=(by1-by0)/Lpx,nx=-uy,ny=ux;
+  const secs=4,seg=Lpx/secs;let boom="";
+  for(let i=secs-1;i>=0;i--){const a=Math.max(0,i*seg-seg*0.18),b=(i+1)*seg,w=(1.2-i*0.2)*k*0.5;
+    const q=[[bx0+ux*a+nx*w,by0+uy*a+ny*w],[bx0+ux*b+nx*w*0.9,by0+uy*b+ny*w*0.9],[bx0+ux*b-nx*w*0.9,by0+uy*b-ny*w*0.9],[bx0+ux*a-nx*w,by0+uy*a-ny*w]];
+    boom+=`<polygon points="${q.map(v=>v.map(n=>n.toFixed(1)).join(",")).join(" ")}" fill="url(#boomG)" stroke="#0b1f3a" stroke-width=".8"/>`}
+  const loadTop=setL+loadH,lx=X(Rg-loadL/2),lw=loadL*k;
   return `<svg class="sketch" viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg" font-family="IBM Plex Sans,Arial,sans-serif" font-size="10">
-    <line x1="0" y1="${gy}" x2="${W}" y2="${gy}" stroke="#15181c"/>
-    ${craneBaseElev(c,X,Y,k)}<rect x="${X(-2.2)}" y="${Y(pivH+0.6)}" width="${4.6*k}" height="${(pivH-0.5)*k}" fill="#0b1f3a" opacity=".85"/>
-    <line x1="${X(-pivX)}" y1="${Y(pivH)}" x2="${X(tx)}" y2="${Y(ty)}" stroke="#0b1f3a" stroke-width="5" stroke-linecap="round"/>
-    ${ok?`<line x1="${X(Rg)}" y1="${Y(ty)}" x2="${X(Rg)}" y2="${Y(hookY)}" stroke="#15181c" stroke-width="1"/><rect x="${X(Rg-loadL/2)}" y="${Y(loadTop)}" width="${loadL*k}" height="${loadH*k}" fill="#dfe7f0" stroke="#0b1f3a"/>
-      ${num(p.setLevel)>0?`<rect x="${X(Rg-loadL/2-1)}" y="${Y(num(p.setLevel))}" width="${(loadL+2)*k}" height="${num(p.setLevel)*k}" fill="#cfd5dd" stroke="#7c8696"/>`:""}`:`<text x="${X(tx)}" y="${Y(ty)-6}" fill="#b3261e" font-weight="600">boom too short</text>`}
-    ${od>0&&oh>0?`<rect x="${X(od)-3}" y="${Y(oh)}" width="6" height="${oh*k}" fill="#b3261e" opacity=".8"/><text x="${X(od)+6}" y="${Y(oh)-3}" fill="#b3261e">obstacle ${fmt(oh)} m</text>`:""}
-    <line x1="${X(0)}" y1="${gy+10}" x2="${X(Rg)}" y2="${gy+10}" stroke="#7c8696" stroke-width=".7"/><text x="${X(Rg/2)}" y="${gy+18}" text-anchor="middle" fill="#7c8696">R = ${fmt(Rg)} m</text>
-    <text x="${X(tx)+4}" y="${Y(ty)+3}" fill="#15181c" font-weight="600">${fmt(L)} m boom${ok?` · ${fmt(g.angle,0)}°`:""}</text>
-    <text x="6" y="12" fill="#7c8696">Elevation · governing radius</text></svg>`}
+    <defs><linearGradient id="boomG" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#6b7f99"/><stop offset=".5" stop-color="#35506f"/><stop offset="1" stop-color="#0b1f3a"/></linearGradient>
+      <pattern id="hatch" width="6" height="6" patternUnits="userSpaceOnUse"><path d="M0,6 L6,0" stroke="#9aa3ae" stroke-width=".7"/></pattern></defs>
+    <rect x="0" y="${gy}" width="${W}" height="10" fill="url(#hatch)"/><line x1="0" y1="${gy}" x2="${W}" y2="${gy}" stroke="#15181c" stroke-width="1.2"/>
+    ${craneBaseElev(c,X,Y,k)}
+    ${c&&num(c.cwt)>0?`<rect x="${X(-tail+0.6)}" y="${Y(pivH+0.2)}" width="${(tail-0.6-2.6)*k}" height="${(pivH+0.2-baseH)*k}" fill="#35506f" stroke="#0b1f3a" stroke-width=".8"/>`:""}
+    <rect x="${X(-2.6)}" y="${Y(pivH+0.4)}" width="${4.6*k}" height="${(pivH+0.4-baseH)*k}" fill="#0b1f3a"/><rect x="${X(0.9)}" y="${Y(pivH+1.4)}" width="${1.6*k}" height="${1.0*k}" fill="#dfe7f0" stroke="#0b1f3a" stroke-width=".8"/>
+    ${boom}<circle cx="${bx1}" cy="${by1}" r="${Math.max(2,0.35*k)}" fill="#fff" stroke="#0b1f3a" stroke-width=".9"/>
+    ${ok?`<line x1="${X(Rg-0.1)}" y1="${by1}" x2="${X(Rg-0.1)}" y2="${Y(hookY+hl*0.55)}" stroke="#15181c" stroke-width=".8"/><line x1="${X(Rg+0.1)}" y1="${by1}" x2="${X(Rg+0.1)}" y2="${Y(hookY+hl*0.55)}" stroke="#15181c" stroke-width=".8"/>
+      <rect x="${X(Rg-0.3)}" y="${Y(hookY+hl*0.55)}" width="${0.6*k}" height="${hl*0.35*k}" fill="#35506f" stroke="#0b1f3a" stroke-width=".8"/><path d="M${X(Rg)},${Y(hookY+hl*0.2)} q${0.25*k},${0.12*k} 0,${0.2*k} q-${0.2*k},${0} -${0.1*k},-${0.08*k}" fill="none" stroke="#0b1f3a" stroke-width="1.2"/>
+      <line x1="${X(Rg)}" y1="${Y(hookY)}" x2="${X(Rg-loadL*0.4)}" y2="${Y(loadTop)}" stroke="#15181c" stroke-width=".9"/><line x1="${X(Rg)}" y1="${Y(hookY)}" x2="${X(Rg+loadL*0.4)}" y2="${Y(loadTop)}" stroke="#15181c" stroke-width=".9"/>
+      ${setL>0?`<rect x="${lx-1*k}" y="${Y(setL)}" width="${lw+2*k}" height="${setL*k}" fill="url(#hatch)" stroke="#7c8696" stroke-width=".8"/>`:""}
+      <rect x="${lx}" y="${Y(loadTop)}" width="${lw}" height="${loadH*k}" fill="#dfe7f0" stroke="#0b1f3a" stroke-width="1"/><text x="${X(Rg)}" y="${Y(loadTop)+loadH*k/2+3.5}" text-anchor="middle" fill="#0b1f3a" font-weight="600">${fmt(num(p.loadMass),1)} t</text>`
+      :`<text x="${X(tipX)}" y="${Y(tipH)-6}" fill="#b3261e" font-weight="600">boom too short for ${fmt(Rg)} m</text>`}
+    ${od>0&&oh>0?`<rect x="${X(od-0.8)}" y="${Y(oh)}" width="${1.6*k}" height="${oh*k}" fill="#cfd5dd" stroke="#7c8696" stroke-width=".8"/><text x="${X(od)}" y="${Y(oh)-4}" text-anchor="middle" fill="#b3261e" font-weight="600">obstacle ${fmt(oh)} m</text>
+      ${g&&g.obstClear!=null?`<line x1="${X(od)}" y1="${Y(oh)}" x2="${X(od)}" y2="${Y(g.boomAtObst)}" stroke="${g.obstClear<num(S.settings.minClear)?"#b3261e":"#1f6b4a"}" stroke-width="1" stroke-dasharray="2 2"/><text x="${X(od)+4}" y="${(Y(oh)+Y(g.boomAtObst))/2+3}" fill="${g.obstClear<num(S.settings.minClear)?"#b3261e":"#1f6b4a"}">${fmt(g.obstClear,2)} m</text>`:""}`:""}
+    <line x1="${X(0)}" y1="${gy+18}" x2="${X(Rg)}" y2="${gy+18}" stroke="#15181c" stroke-width=".7"/><line x1="${X(0)}" y1="${gy+14}" x2="${X(0)}" y2="${gy+22}" stroke="#15181c" stroke-width=".7"/><line x1="${X(Rg)}" y1="${gy+14}" x2="${X(Rg)}" y2="${gy+22}" stroke="#15181c" stroke-width=".7"/><text x="${X(Rg/2)}" y="${gy+29}" text-anchor="middle" fill="#15181c" font-weight="600">R = ${fmt(Rg)} m</text>
+    ${ok?`<line x1="${W-14}" y1="${gy}" x2="${W-14}" y2="${Y(tipH)}" stroke="#7c8696" stroke-width=".7"/><line x1="${W-18}" y1="${Y(tipH)}" x2="${W-10}" y2="${Y(tipH)}" stroke="#7c8696" stroke-width=".7"/><text x="${W-17}" y="${(gy+Y(tipH))/2}" text-anchor="middle" fill="#7c8696" transform="rotate(-90 ${W-17} ${(gy+Y(tipH))/2})">tip ${fmt(tipH)} m</text>`:""}
+    <text x="6" y="12" fill="#15181c" font-weight="600">${esc(R.crane)} · ${fmt(L)} m boom${ok?` at ${fmt(g.angle,0)}°`:""}</text>
+    <text x="6" y="24" fill="#7c8696">Elevation at the governing radius${ok?` · hook ${fmt(g.hookAvail)} m available, ${fmt(g.hookReq)} m needed`:""}</text></svg>`}
 
 /* ── printed plan ── */
 function sheetHTML(p){const R=calc(p),c=R.chart,g=R.geom,gr=R.ground,st=S.settings;
@@ -618,13 +751,14 @@ function sheetHTML(p){const R=calc(p),c=R.chart,g=R.geom,gr=R.ground,st=S.settin
       <div class="box"><b>Height</b>${g&&!g.unreach?dl([["Tip height",fmt(g.tipH)+" m"],["Hook available",fmt(g.hookAvail)+" m"],["Hook needed",fmt(g.hookReq)+" m"],["Result",g.hookOK?"OK":"<b class='warn'>SHORT</b>"]]):"<div class='small'>Not checked – no pivot geometry on the chart.</div>"}</div>
       <div class="box"><b>Boom clearance</b>${g&&g.obstClear!=null?dl([["Obstacle",`${fmt(num(p.obstH))} m high at ${fmt(num(p.obstD))} m`],["Boom height there",fmt(g.boomAtObst)+" m"],["Clearance",fmt(g.obstClear,2)+" m"],["Result",g.obstClear>=num(st.minClear)?"OK":"<b class='warn'>TOO CLOSE</b>"]]):"<div class='small'>No obstacle entered.</div>"}</div>
       <div class="box"><b>Ground bearing</b>${gr?dl([["Crane + load",fmt(gr.total,1)+" t"],gr.padLoad!=null?[`On one pad (${PAD_SHARE*100} %)`,fmt(gr.padLoad,1)+" t"]:null,gr.avg!=null?["Average on tracks",fmt(gr.avg,0)+" kPa"]:null,gr.padAvg!=null?["On the pad",fmt(gr.padAvg,0)+" kPa"]:null,gr.matAvg!=null?["On mats",fmt(gr.matAvg,0)+" kPa"]:null,gr.design!=null?[gr.outrigger?"One pad, design":"One track loaded",fmt(gr.design,0)+" kPa"]:null,["Allowable",gr.allow?fmt(gr.allow,0)+" kPa":"–"],["Result",gr.ok==null?"not checked":gr.ok?"OK":"<b class='warn'>EXCEEDS</b>"]]):"<div class='small'>No operating weight entered.</div>"}</div></div>
-    <div class="keep"><h2>5 · Sketch</h2><div class="cols">${sketchPlan(p,R)}${sketchElev(p,R)}</div></div>
-    <div class="keep"><h2>6 · Hazards and controls</h2>
+    ${siteHTML(p,R,5)}
+    <div class="keep"><h2>${S.site[p.id]?6:5} · Sketch</h2><div class="cols">${sketchPlan(p,R)}${sketchElev(p,R)}</div></div>
+    <div class="keep"><h2>${S.site[p.id]?7:6} · Hazards and controls</h2>
     ${R.flagHits.length?`<div class="box" style="margin-bottom:6px"><b>Critical lift factors:</b> ${esc(R.flagHits.join("; "))}</div>`:""}
     ${p.hazards?`<div style="white-space:pre-wrap;margin-bottom:6px">${esc(p.hazards)}</div>`:""}
     <div class="chk">${CHECKS.map(([k,l])=>`<div><i class="${p.checks&&p.checks[k]?"on":""}"></i>${esc(l)}</div>`).join("")}</div>
     ${p.notes?`<p style="white-space:pre-wrap"><b>Notes:</b> ${esc(p.notes)}</p>`:""}</div>
-    <div class="keep"><h2>7 · Sign-off</h2>
+    <div class="keep"><h2>${S.site[p.id]?8:7} · Sign-off</h2>
     <div class="sign"><div><b>Prepared by</b>${esc(p.preparedBy)}<br>Signature / date</div><div><b>Crane operator</b>${esc(p.operator)}<br>Signature / date</div><div><b>Dogman / rigger</b>${esc(p.dogman)}<br>Signature / date</div><div><b>Lift supervisor</b>${esc(p.liftSupervisor)}<br>Signature / date</div><div><b>${esc(st.company||"Contractor")} approval</b><br>Signature / date</div><div><b>Principal contractor review${R.critical?" (required – critical lift)":""}</b><br>Signature / date</div></div>
     </div><div class="foot">Prepared with the lift planner on ${esc(new Date().toLocaleString("en-AU"))}. Lift to be re-planned if the load, crane configuration, radius, ground or weather differ from this sheet. All lifts to be carried out by licensed personnel in accordance with the rating book, the site's crane procedures and AS 2550.1 / AS 2550.5.</div>${appendixHTML(c)}
   </div>`}
@@ -639,27 +773,39 @@ document.addEventListener("input",e=>{const t=e.target,p=plan();
   if(t.dataset.set!==undefined){S.settings[t.dataset.set]=t.type==="number"?num(t.value):t.value;save();renderStrip();return}
   if(t.dataset.flag){p.flags=p.flags||{};p.flags[t.dataset.flag]=t.checked;save();renderStrip();return}
   if(t.dataset.check){p.checks=p.checks||{};p.checks[t.dataset.check]=t.checked;save();return}
+  if(t.dataset.obsth!==undefined&&p.site&&p.site.obst){const o=p.site.obst[+t.dataset.obsth];if(o){o.h=t.value===""?"":num(t.value);save();rerenderKeepingFocus()}return}
   if(t.dataset.rig!==undefined){const r=p.rig[+t.dataset.rig];if(r){r[t.dataset.rk]=t.type==="number"?num(t.value):t.value;save();if(t.dataset.rk!=="name")rerenderKeepingFocus();else renderStrip()}return}
   if(t.dataset.c!==undefined&&S.editChart){const k=t.dataset.c;S.editChart[k]=k==="includesHook"?t.value==="1":t.type==="number"?(t.value===""?"":num(t.value)):t.value;if(k==="type")render();return}});
 /* Re-render the tab (results change with every field) but keep the field being typed in as it was,
    so a half-typed decimal isn't flattened mid-keystroke and focus stays put. */
-function rerenderKeepingFocus(){const a=document.activeElement,key=x=>x.dataset.k||(x.dataset.rig!==undefined?"rig"+x.dataset.rig+x.dataset.rk:null),id=a&&key(a),raw=a&&a.value;render();
+function rerenderKeepingFocus(){const a=document.activeElement,key=x=>x.dataset.k||(x.dataset.rig!==undefined?"rig"+x.dataset.rig+x.dataset.rk:x.dataset.obsth!==undefined?"obsth"+x.dataset.obsth:null),id=a&&key(a),raw=a&&a.value;render();
   if(id){const el=$$("input,select").find(x=>key(x)===id);if(el){if(el.type==="number"&&el.value!==raw)el.value=raw;el.focus()}}}
 document.addEventListener("change",e=>{if(e.target.id==="planSel"){S.planId=e.target.value;save();render()}
+  if(e.target.id==="siteFile"){const f=e.target.files[0];e.target.value="";if(!f)return;const p=plan();
+    readSiteFile(f).then(img=>{S.site[p.id]=img;p.site={};S.lineStart=null;S.tool="scale";save();return saveSite(p.id)}).then(()=>{render();toast("Image added – set the scale first")}).catch(err=>toast(`${f.name}: ${err.message||"could not be read"}`));return}
   if(e.target.id==="chartFiles"&&S.editChart){const fs=[...e.target.files];e.target.value="";if(fs.length)addChartFiles(fs,S.editChart.id);return}
   if(e.target.id==="gridFile"&&S.editChart){const f=e.target.files[0];e.target.value="";if(!f)return;f.text().then(t=>{S.editChart.grid=gridFromText(t);render();toast(`Table imported from ${f.name} – check it before saving`)});return}
   if(e.target.id==="importAll"){const f=e.target.files[0];if(!f)return;f.text().then(txt=>{const d=JSON.parse(txt);if(!d||(!Array.isArray(d.plans)&&!Array.isArray(d.charts)))throw new Error("bad");
     (d.charts||[]).forEach(c=>{if(c&&c.id&&c.booms){if(!c.type)c.type="crawler";const i=S.charts.findIndex(x=>x.id===c.id);if(i>=0)S.charts[i]=c;else S.charts.push(c)}});
     if(d.attachments)Object.entries(d.attachments).forEach(([k,v])=>{if(Array.isArray(v)&&v.length){S.attach[k]=v;saveAttach(k)}});
+    if(d.siteImages)Object.entries(d.siteImages).forEach(([k,v])=>{if(v&&v.dataUrl){S.site[k]=v;saveSite(k)}});
     (d.plans||[]).forEach(p=>{if(p&&p.id){const i=S.plans.findIndex(x=>x.id===p.id);if(i>=0)S.plans[i]=p;else S.plans.push(p)}});
     if(d.settings)S.settings={...S.settings,...d.settings};save();render();toast(`Imported ${(d.plans||[]).length} plans and ${(d.charts||[]).length} charts`)}).catch(()=>toast("That file isn't a lift planner export"));e.target.value=""}});
-document.addEventListener("click",e=>{const t=e.target.closest("button,[data-tab],[data-zoom]");if(!t)return;const p=plan();
+document.addEventListener("click",e=>{if(e.target.closest("#site")&&S.tab==="site"){siteClick(e);return}
+  const t=e.target.closest("button,[data-tab],[data-zoom]");if(!t)return;const p=plan();
   if(t.dataset.zoom!==undefined){t.closest("figure").classList.toggle("zoom");return}
+  if(t.dataset.tool){S.tool=t.dataset.tool;S.lineStart=null;render();return}
   if(t.dataset.tab){S.tab=t.dataset.tab;S.editChart=null;render();window.scrollTo(0,0);return}
   switch(t.id){
     case "newPlan":{const n=newPlan();S.plans.push(n);S.planId=n.id;S.tab="lift";save();render();return}
-    case "dupPlan":{const n={...JSON.parse(JSON.stringify(p)),id:uid(),createdAt:Date.now(),title:(p.title||planName(p))+" (copy)",checks:{}};S.plans.push(n);S.planId=n.id;save();render();toast("Duplicated");return}
-    case "delPlan":{if(!confirm(`Delete “${planName(p)}”?`))return;S.plans=S.plans.filter(x=>x.id!==p.id);S.planId=null;save();render();return}
+    case "dupPlan":{const n={...JSON.parse(JSON.stringify(p)),id:uid(),createdAt:Date.now(),title:(p.title||planName(p))+" (copy)",checks:{}};if(S.site[p.id]){S.site[n.id]=S.site[p.id];saveSite(n.id)}S.plans.push(n);S.planId=n.id;save();render();toast("Duplicated");return}
+    case "delPlan":{if(!confirm(`Delete “${planName(p)}”?`))return;S.plans=S.plans.filter(x=>x.id!==p.id);if(S.site[p.id]){delete S.site[p.id];saveSite(p.id)}S.planId=null;save();render();return}
+    case "scaleSet":{const m=num($("#scaleM").value);if(!(m>0)){toast("Enter the distance in metres");return}pushHist(p);p.site.scale.m=m;S.tool="crane";save();render();toast("Scale set – now place the crane");return}
+    case "siteUndo":{const h=S.hist[p.id];if(!h||!h.length){toast("Nothing to undo");return}p.site=JSON.parse(h.pop());S.lineStart=null;save();render();return}
+    case "siteClear":{if(!confirm("Clear all markup on the site image?"))return;pushHist(p);p.site={};S.lineStart=null;save();render();return}
+    case "siteRemove":{if(!confirm("Remove the site image and its markup?"))return;delete S.site[p.id];saveSite(p.id);p.site=null;S.lineStart=null;save();render();return}
+    case "applySite":{const g=calc(p).site;if(!g)return;if(g.pickR!=null)p.pickR=+g.pickR.toFixed(1);if(g.setR!=null)p.setR=+g.setR.toFixed(1);if(g.slew!=null)p.slewDeg=Math.round(g.slew);
+      if(g.worst&&g.worst.h>0){p.obstD=+g.worst.d.toFixed(1);p.obstH=g.worst.h}save();render();toast("Plan updated from the site layout");return}
     case "openEditor":{S.editChart=S.editChart?null:{id:uid(),make:"",model:"",type:"crawler",includesHook:false,hookMass:"",hookLen:2,grid:""};S.extracted=null;render();if(S.editChart)$("#chartEditor").scrollIntoView({behavior:"smooth"});return}
     case "cancelChart":{const c=S.editChart;S.editChart=null;S.extracted=null;if(c&&!chartOf(c.id)&&S.attach[c.id]){delete S.attach[c.id];saveAttach(c.id)}render();return}
     case "useExtracted":{if(S.editChart&&S.extracted){S.editChart.grid=S.extracted.text;S.extracted=null;render();toast("Check every figure against the page before saving")}return}
@@ -667,7 +813,7 @@ document.addEventListener("click",e=>{const t=e.target.closest("button,[data-tab
         ["cwt","hookMass","hookLen","pivotH","pivotX","opWeight","trackLen","shoeW","maxWind","outBase","outWidth","padL","padW"].forEach(k=>out[k]=num(out[k]));out.demo=false;
         const i=S.charts.findIndex(x=>x.id===out.id);if(i>=0)S.charts[i]=out;else S.charts.push(out);p.chartId=out.id;p.boom=null;S.editChart=null;S.extracted=null;save();render();toast("Chart saved")}catch(err){toast(err.message)}return}
     case "rigAdd":{p.rig=p.rig||[];p.rig.push({name:"",mass:0,wll:"",qty:1});save();render();return}
-    case "exportAll":{const blob=new Blob([JSON.stringify({plans:S.plans,charts:S.charts,attachments:S.attach,settings:S.settings,exportedAt:new Date().toISOString()},null,1)],{type:"application/json"});const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download=`lift-planner-${today()}.json`;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),2000);return}
+    case "exportAll":{const blob=new Blob([JSON.stringify({plans:S.plans,charts:S.charts,attachments:S.attach,siteImages:S.site,settings:S.settings,exportedAt:new Date().toISOString()},null,1)],{type:"application/json"});const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download=`lift-planner-${today()}.json`;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),2000);return}
     case "printBtn":{window.print();return}
     case "backBtn":{S.tab="check";render();return}}
   if(t.dataset.rigdel!==undefined){p.rig.splice(+t.dataset.rigdel,1);save();render();return}

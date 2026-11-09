@@ -133,6 +133,31 @@ async def main():
             assert f"{pad:,.0f}" in txt and "one outrigger pad" in txt, (pad, txt[:900])
             await pg.screenshot(path=OUT / "lp-05b-outrigger.png", full_page=True)
 
+            # site layout: upload an image, set the scale, place the crane, pick, set and an obstacle, apply
+            await pg.click('[data-tab="site"]'); await pg.wait_for_timeout(200)
+            photo = await pg.screenshot(clip={"x": 0, "y": 0, "width": 390, "height": 260})   # any PNG stands in for the site photo
+            await pg.set_input_files("#siteFile", {"name": "site.png", "mimeType": "image/png", "buffer": photo})
+            await pg.wait_for_selector("#site img", timeout=10000); await pg.wait_for_timeout(200)
+            async def tap(tool, fx, fy):
+                if tool: await pg.click(f'[data-tool="{tool}"]'); await pg.wait_for_timeout(80)
+                await pg.evaluate("document.querySelector('#site').scrollIntoView({block:'center'})"); await pg.wait_for_timeout(50)
+                b = await pg.locator("#site").bounding_box()
+                await pg.mouse.click(b["x"] + fx * b["width"], b["y"] + fy * b["height"]); await pg.wait_for_timeout(150)
+                return b
+            await tap("scale", 0.1, 0.5); await tap(None, 0.6, 0.5)            # half the width = 10 m
+            await pg.fill("#scaleM", "10"); await pg.click("#scaleSet"); await pg.wait_for_timeout(150)
+            b = await tap("crane", 0.5, 0.5)
+            await tap("pick", 0.7, 0.5)                                         # 0.2 w = 4 m
+            await tap("set", 0.5, 0.5 - 0.25 * b["width"] / b["height"])       # 0.25 w = 5 m, 90° round
+            await tap("obst", 0.6, 0.5)                                         # 2 m from the crane
+            await pg.fill('[data-obsth="0"]', "2"); await pg.dispatch_event('[data-obsth="0"]', "input"); await pg.wait_for_timeout(150)
+            txt = await pg.inner_text("#body")
+            for key in ["4.0 m", "5.0 m", "90°", "2.0 m high at 2.0 m", "differs"]: assert key in txt, (key, txt[-900:])
+            await fits(pg, "site tab"); await pg.screenshot(path=OUT / "lp-05c-site.png", full_page=True)
+            await pg.click("#applySite"); await pg.wait_for_timeout(200)
+            s = await strip(pg); assert "40.00 t" in s and "6.0 m" in s, s      # set 5 m -> next rated radius 6 m on the 24 m boom
+            txt = await pg.inner_text("#body"); assert "differs" not in txt and txt.count("matches") >= 3, txt[-600:]
+
             # plan document: back on the demo chart (banner), print to PDF
             await pg.click('[data-tab="crane"]'); await pg.wait_for_timeout(200)
             await set_field(pg, "chartId", "demo"); await set_field(pg, "boom", "42"); await set_field(pg, "setR", "30")
@@ -147,10 +172,10 @@ async def main():
             from pypdf import PdfReader
             rd = PdfReader(str(pdf)); n = len(rd.pages)
             text = "\n".join(pg_.extract_text() or "" for pg_ in rd.pages)
-            assert 2 <= n <= 3, f"{n} pages"
+            assert 2 <= n <= 4, f"{n} pages"
             w, h = float(rd.pages[0].mediabox.width), float(rd.pages[0].mediabox.height)
             assert abs(w - 595.28) < 2 and abs(h - 841.89) < 2, (w, h)
-            for key in ["CRITICAL LIFT", "Capacity check", "Sign-off", "DEMO CHART", "Test lift"]:
+            for key in ["CRITICAL LIFT", "Capacity check", "Site layout", "Sign-off", "DEMO CHART", "Test lift"]:
                 assert key.lower() in text.lower(), f"'{key}' missing from the PDF text"
             print(f"pdf: {n} pages, {pdf.stat().st_size//1024} KB")
             for f in OUT.glob("lp-plan-*.png"): f.unlink()
@@ -160,6 +185,7 @@ async def main():
             await pg.reload(); await pg.wait_for_timeout(600)
             assert "Test lift – precast panel" in await pg.inner_text("#planTitle")
             assert await pg.evaluate("Object.values(S.attach).flat().length") == 1
+            assert await pg.evaluate("Object.keys(S.site).length") == 1
             await pg.click("#dupPlan"); await pg.wait_for_timeout(150)
             assert await pg.locator("#planSel option").count() == 2
             pg.on("dialog", lambda d: asyncio.ensure_future(d.accept()))
