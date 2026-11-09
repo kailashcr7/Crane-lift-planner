@@ -24,3 +24,22 @@ jobs:
         with:
           name: screenshots-and-pdf
           path: tools/test/out
+
+  # Publishes public/ to the Netlify site once the tests pass on the default branch.
+  # Needs the NETLIFY_AUTH_TOKEN repository secret (Netlify > User settings > Applications >
+  # Personal access tokens); the job is skipped while the secret is missing.
+  deploy:
+    needs: e2e
+    if: github.event_name == 'push' && github.ref == format('refs/heads/{0}', github.event.repository.default_branch)
+    runs-on: ubuntu-latest
+    env:
+      NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
+      NETLIFY_SITE_ID: 498bcf24-bc92-419a-8c0f-dc18a5f9f2b1
+    steps:
+      - uses: actions/checkout@v4
+      - name: Deploy to Netlify
+        if: env.NETLIFY_AUTH_TOKEN != ''
+        run: npx -y netlify-cli deploy --prod --dir=public --site="$NETLIFY_SITE_ID" --message="${{ github.sha }}"
+      - name: Secret missing
+        if: env.NETLIFY_AUTH_TOKEN == ''
+        run: echo "NETLIFY_AUTH_TOKEN is not set – skipping the Netlify deploy."
