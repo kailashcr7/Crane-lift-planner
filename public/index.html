@@ -498,6 +498,13 @@ function tabLift(){const p=plan();
     <label class="f wide">Project<input data-set="project" value="${esc(S.settings.project)}"></label></div>
     <div class="row" style="margin-top:12px"><button class="btn small" id="exportAll">Export plans &amp; charts (JSON)</button><label class="btn small" for="importAll" style="cursor:pointer">Import JSON</label><input type="file" id="importAll" accept="application/json" class="hidden"></div>
     <p class="small muted" style="margin-top:8px">Everything is stored on this device only. Export before changing phones, and import on the laptop to print from there.</p>
+  </div>
+  <div class="card"><div class="kicker">Optional</div><h3>AI assistant with your own Claude API key</h3>
+    <p class="small muted">With an API key from the Claude Console the planner can read a photographed load chart into the rating table, describe the lift scene from the site image and review a plan. Nothing is sent unless you press one of those buttons. Requests go straight from this browser to api.anthropic.com with your key – no other server is involved – and usage is billed to your account. The key is kept on this device only and is left out of JSON exports. Everything the assistant returns is a draft for you to check; it never changes a capacity or a verdict by itself.</p>
+    <div class="grid">
+      <label class="f">API key<input data-ai="key" type="password" autocomplete="off" spellcheck="false" placeholder="sk-ant-…" value="${esc(ai().key||"")}"></label>
+      <label class="f">Model<select data-ai="model">${AI_MODELS.map(([id,l])=>`<option value="${id}" ${(ai().model||AI_MODELS[0][0])===id?"selected":""}>${l}</option>`).join("")}</select></label></div>
+    <div class="row" style="margin-top:12px"><button class="btn small" id="aiTest" ${ai().key?"":"disabled"}>${S.aiBusy==="test"?"Testing…":"Test the key"}</button><button class="btn small warn" id="aiForget" ${ai().key?"":"disabled"}>Forget the key</button><span class="small muted">${ai().key?"Key saved on this device – AI buttons are on":"No key – the AI buttons stay off"}</span></div>
   </div>`}
 
 function tabCrane(){const p=plan(),c=chartOf(p.chartId),R=calc(p),sg=suggestionFor(c),att=c?(S.attach[c.id]||[]):[];
@@ -543,7 +550,9 @@ function chartForm(c){const f=(k,l,t,a)=>`<label class="f">${l}<input data-c="${
       ${att.length?`<div class="pages">${att.map((a,i)=>`<figure class="page"><img src="${a.dataUrl}" alt="${esc(a.name)}" data-zoom="${i}"><button class="del" data-attdel="${esc(a.id)}" aria-label="Remove page">✕</button><figcaption>${esc(a.name)}</figcaption></figure>`).join("")}</div>`:""}
       <div class="row"><label class="btn small" for="chartFiles">Add pages (PDF or image)</label><input type="file" id="chartFiles" accept="application/pdf,image/*" multiple class="hidden">
       <label class="btn small" for="gridFile">Import table (CSV / TSV)</label><input type="file" id="gridFile" accept=".csv,.tsv,.txt,text/csv,text/tab-separated-values,text/plain" class="hidden">
+      ${att.length&&aiOn()?`<button class="btn small" id="aiChart" ${S.aiBusy?"disabled":""}>${S.aiBusy==="chart"?"Reading the pages…":"Read the table from the pages with AI"}</button>`:""}
       ${S.extracted?`<button class="btn small primary" id="useExtracted">Insert the text read from ${esc(S.extracted.name)}</button>`:""}<span class="small muted" id="fileStatus"></span></div>
+      ${S.extracted&&S.extracted.notes&&S.extracted.notes.length?`<div class="notice" style="margin-top:8px"><b>Notes from the reading:</b> ${esc(S.extracted.notes.join(" · "))} Check every figure against the page.</div>`:""}
     </div>
     <label class="f wide">Rating table<textarea data-c="grid" rows="10">${esc(c.grid!=null?c.grid:(c.booms?gridText(c):"Radius\t24\t30\t36\t42\n6\t\n8\t\n10\t"))}</textarea></label></div>
     <div class="row" style="margin-top:12px"><button class="btn primary" id="saveChart">Save chart</button><button class="btn" id="cancelChart">Cancel</button></div>
@@ -566,7 +575,63 @@ function tabSite(){const p=plan(),R=calc(p),img=S.site[p.id],s=p.site||{},g=R.si
   </div>
   ${img?`<div class="card"><div class="kicker">Measured from the markup</div><h3>Findings</h3>${g?`<div class="tablewrap">${findingsTable(p,R)}</div>
     <div class="row"><button class="btn primary" id="applySite">Apply the measured radii, slew and obstacle to the plan</button></div>`:`<p class="small muted">${siteScale(s)?"Place the crane's slew centre to start measuring.":"Set the scale – nothing can be measured without it."}</p>`}
-    <p class="small muted" style="margin-top:8px">Measurements follow the scale you set, so prefer a plan view or a straight-down drone shot. Boom clearance over the nearest obstacle is checked on the Checks step; the powerline no-go distance depends on voltage and jurisdiction – take it from the network operator or the site rules.</p></div>`:""}`}
+    <p class="small muted" style="margin-top:8px">Measurements follow the scale you set, so prefer a plan view or a straight-down drone shot. Boom clearance over the nearest obstacle is checked on the Checks step; the powerline no-go distance depends on voltage and jurisdiction – take it from the network operator or the site rules.</p></div>${aiSiteCard(p)}`:""}`}
+/* ── AI assistant (optional, the planner's own key) ── */
+const AI_MODELS=[["claude-opus-5-5","Claude Opus 5.5 – default"],["claude-sonnet-5-5","Claude Sonnet 5.5 – faster, cheaper"],["claude-haiku-5-5","Claude Haiku 5.5 – cheapest"]];
+const ai=()=>S.settings.ai||(S.settings.ai={});const aiOn=()=>!!ai().key;
+const imgBlock=dataUrl=>{const m=/^data:(image\/[a-z]+);base64,(.*)$/i.exec(dataUrl);return m?{type:"image",source:{type:"base64",media_type:m[1],data:m[2]}}:null};
+/* One call to the Messages API with a JSON schema for the answer. Fallbacks route a declined request to
+   another model on the models that support it; a refusal that survives is reported, never hidden. */
+async function askClaude({system,content,schema,effort="medium",maxTokens=16000}){const a=ai();if(!a.key)throw new Error("Enter your API key in the planner settings first");
+  const model=a.model||AI_MODELS[0][0],fb=model!=="claude-haiku-5-5";
+  const headers={"content-type":"application/json","x-api-key":a.key,"anthropic-version":"2026-10-21","anthropic-dangerous-direct-browser-access":"true"};if(fb)headers["anthropic-beta"]="server-side-fallback-2026-07-01";
+  const body={model,max_tokens:maxTokens,system,messages:[{role:"user",content}],output_config:{effort,format:{type:"json_schema",schema}}};if(fb)body.fallbacks="default";
+  const r=await fetch("https://api.anthropic.com/v1/messages",{method:"POST",headers,body:JSON.stringify(body)});
+  const d=await r.json().catch(()=>({}));
+  if(!r.ok)throw new Error(d.error&&d.error.message?d.error.message:`HTTP ${r.status}`);
+  if(d.stop_reason==="refusal")throw new Error("The model declined this request"+(d.stop_details&&d.stop_details.explanation?": "+d.stop_details.explanation:""));
+  if(d.stop_reason==="max_tokens")throw new Error("The answer was cut off – try again");
+  const text=(d.content||[]).filter(b=>b.type==="text").map(b=>b.text).join("");let data;try{data=JSON.parse(text)}catch(e){throw new Error("The answer was not valid JSON")}
+  return {data,model:d.model,usage:d.usage}}
+async function aiRun(kind,fn){if(S.aiBusy)return;S.aiBusy=kind;render();try{await fn();toast("Done – check the result before using it")}catch(err){toast(err.message||"The request failed")}finally{S.aiBusy=null;render()}}
+const str={type:"string"},strs={type:"array",items:str};
+const SCHEMA_CHART={type:"object",properties:{booms:{type:"array",items:{type:"number"}},rows:{type:"array",items:{type:"object",properties:{radius:{type:"number"},caps:{type:"array",items:{anyOf:[{type:"number"},{type:"null"}]}}},required:["radius","caps"],additionalProperties:false}},notes:strs},required:["booms","rows","notes"],additionalProperties:false};
+const SCHEMA_SITE={type:"object",properties:{summary:str,hazards:{type:"array",items:{type:"object",properties:{hazard:str,control:str},required:["hazard","control"],additionalProperties:false}},verify:strs},required:["summary","hazards","verify"],additionalProperties:false};
+const SCHEMA_REVIEW={type:"object",properties:{verdict:{type:"string",enum:["looks_sound","needs_changes","do_not_proceed"]},findings:{type:"array",items:{type:"object",properties:{severity:{type:"string",enum:["high","medium","low"]},finding:str,action:str},required:["severity","finding","action"],additionalProperties:false}},missing:strs},required:["verdict","findings","missing"],additionalProperties:false};
+async function aiReadChart(c){const att=S.attach[c.id]||[];const imgs=att.map(a=>imgBlock(a.dataUrl)).filter(Boolean);if(!imgs.length)throw new Error("No chart pages to read");
+  const {data}=await askClaude({effort:"high",system:"You read crane load charts (rating books) for a lift planner. Extract the main rating table from the pages: the boom lengths in metres as columns and, for each radius row in metres, the rated load in tonnes for every boom length. Use null where the book shows no rating or a figure is illegible – never guess. If capacities are printed in kg or lb convert them to tonnes and say so in the notes. Note the configuration, counterweight, slew range and whether the hook block is included, when printed. If the pages hold several tables, read the one matching the configuration named by the planner and say which you used.",
+    content:[...imgs,{type:"text",text:`Crane: ${craneName(c)}. Configuration wanted: ${c.cfg||"the main boom chart"}. Return the table.`}],schema:SCHEMA_CHART});
+  if(!data.booms.length||!data.rows.length)throw new Error("No table was found on the pages");
+  S.extracted={name:"the AI reading",notes:data.notes,text:["Radius\t"+data.booms.join("\t"),...data.rows.map(r=>r.radius+"\t"+data.booms.map((_,i)=>r.caps[i]==null?"-":r.caps[i]).join("\t"))].join("\n")}}
+function planBrief(p,R){const c=R.chart;return {crane:R.crane,type:c?craneType(c):null,chart:c?c.name:null,boom_m:R.boom,pick_radius_m:num(p.pickR),set_radius_m:num(p.setR),slew_deg:num(p.slewDeg),
+  load_t:num(p.loadMass),weight_source:p.loadSource,allowance_pct:num(p.allowPct),gear_t:+R.rigMass.toFixed(2),hook_block_t:R.hookCounted?R.hookMass:0,gross_t:+R.gross.toFixed(2),rated_t:R.cap,rated_at_m:R.gov&&R.gov.chartR,utilisation_pct:R.pct!=null?Math.round(R.pct):null,
+  load_dims_m:[p.loadL,p.loadW,p.loadH].map(num),cog:p.cog,sling:{legs:R.sling.legs,carrying:R.sling.eff,angle_deg:R.sling.ang,tension_t:+R.sling.tension.toFixed(2),lowest_wll_t:R.sling.minWll},
+  geometry:R.geom&&!R.geom.unreach?{boom_angle_deg:Math.round(R.geom.angle),tip_m:+R.geom.tipH.toFixed(1),hook_available_m:+R.geom.hookAvail.toFixed(1),hook_needed_m:+R.geom.hookReq.toFixed(1),obstacle:num(p.obstD)>0?{distance_m:num(p.obstD),height_m:num(p.obstH),clearance_m:R.geom.obstClear!=null?+R.geom.obstClear.toFixed(2):null}:null}:null,
+  ground:R.ground?{crane_plus_load_t:+R.ground.total.toFixed(1),design_kpa:R.ground.design!=null?Math.round(R.ground.design):null,allowable_kpa:R.ground.allow||null,basis:R.ground.label,mats:!!p.mats}:null,
+  critical:R.critical,reasons:R.reasons,fails:R.fails,warnings:R.warnings,site_markup:R.site?{pick_m:R.site.pickR,set_m:R.site.setR,slew_deg:R.site.slew,zone_ok:R.site.zoneOK,powerline_m:R.site.lineDist}:null,
+  hazards_text:p.hazards,notes:p.notes,checks_ticked:Object.keys(p.checks||{}).filter(k=>p.checks[k]),checks_open:CHECKS.map(([k])=>k).filter(k=>!(p.checks&&p.checks[k])),people:{supervisor:p.liftSupervisor,operator:p.operator,dogman:p.dogman},location:p.location,description:p.description}}
+async function aiDescribeSite(p){const img=S.site[p.id];if(!img)throw new Error("Upload a site image first");const R=calc(p);
+  const {data,model}=await askClaude({system:"You assist a crane lift planner. Describe factually what the image shows about the lifting area, then identify hazards that matter for a mobile or crawler crane lift there – ground and slopes, excavations and edges, overhead lines, structures and obstacles in the slew path, traffic, people, access and egress, water, weather exposure – each with one practical control. List what the planner should verify on site. Say plainly when something cannot be determined from the image. Do not invent measurements.",
+    content:[imgBlock(img.dataUrl),{type:"text",text:"Lift context: "+JSON.stringify({crane:R.crane,boom_m:R.boom,pick_radius_m:num(p.pickR),set_radius_m:num(p.setR),load_t:num(p.loadMass),description:p.description||null,location:p.location||null})}],schema:SCHEMA_SITE});
+  p.ai=p.ai||{};p.ai.site={...data,model,at:Date.now()};save()}
+async function aiReview(p){const R=calc(p);
+  const {data,model}=await askClaude({effort:"high",system:"You are an experienced crane lift planning engineer reviewing a lift plan prepared in a planning tool (Australian practice: AS 2550.1 and AS 2550.5, the crane's rating book and LMI govern). Review the figures and the plan as a whole: capacity margin, radius and boom choice, rigging and sling tensions, hook height, boom clearance, ground bearing, critical-lift classification, hazards and controls, and what is missing or inconsistent. Be specific and quote the figures you rely on. Do not invent chart values or site conditions. Each finding carries one concrete action.",
+    content:[{type:"text",text:"Lift plan data (JSON):\n"+JSON.stringify(planBrief(p,R))}],schema:SCHEMA_REVIEW});
+  p.ai=p.ai||{};p.ai.review={...data,model,at:Date.now()};save()}
+function aiSiteCard(p){if(!aiOn()||!S.site[p.id])return "";const r=p.ai&&p.ai.site;
+  return `<div class="card"><div class="kicker">AI assistant</div><h3>Lift scene from the image</h3>
+    <div class="row"><button class="btn small" id="aiSite" ${S.aiBusy?"disabled":""}>${S.aiBusy==="site"?"Looking at the image…":r?"Describe the scene again":"Describe the scene with AI"}</button>${r?`<button class="btn small primary" id="aiSiteApply">Add the hazards and controls to the plan</button>`:""}<span class="small muted">Sends the site image and the lift figures to api.anthropic.com with your key.</span></div>
+    ${r?`<p style="margin-top:10px">${esc(r.summary)}</p>
+      ${r.hazards.length?`<div class="tablewrap"><table><thead><tr><th>Hazard seen</th><th>Control</th></tr></thead><tbody>${r.hazards.map(h=>`<tr><td style="white-space:normal">${esc(h.hazard)}</td><td style="white-space:normal">${esc(h.control)}</td></tr>`).join("")}</tbody></table></div>`:""}
+      ${r.verify.length?`<p class="small"><b>Verify on site:</b> ${esc(r.verify.join(" · "))}</p>`:""}
+      <p class="small muted">Draft from ${esc(r.model||"the model")} – a description of an image, not a site inspection. Edit what you add to the plan.</p>`:""}</div>`}
+function aiReviewCard(p){if(!aiOn())return "";const r=p.ai&&p.ai.review,V={looks_sound:["Looks sound","ok"],needs_changes:["Needs changes","crit"],do_not_proceed:["Do not proceed as planned","warn"]};
+  return `<div class="card"><div class="kicker">AI assistant</div><h3>Plan review</h3>
+    <div class="row"><button class="btn small" id="aiReview" ${S.aiBusy?"disabled":""}>${S.aiBusy==="review"?"Reviewing…":r?"Review again":"Review this plan with AI"}</button>${r?`<button class="btn small primary" id="aiReviewApply">Add the findings to the notes</button>`:""}<span class="small muted">Sends the plan's figures (no images) to api.anthropic.com with your key.</span></div>
+    ${r?`<p style="margin-top:10px"><span class="pill ${(V[r.verdict]||V.needs_changes)[1]}">${(V[r.verdict]||V.needs_changes)[0]}</span></p>
+      ${r.findings.map(f=>`<div class="notice ${f.severity==="high"?"warn":""}"><b>${esc(f.severity)}:</b> ${esc(f.finding)} <i>→ ${esc(f.action)}</i></div>`).join("")}
+      ${r.missing.length?`<p class="small"><b>Missing or unverified:</b> ${esc(r.missing.join(" · "))}</p>`:""}
+      <p class="small muted">Draft from ${esc(r.model||"the model")} – a second opinion on the figures entered, not an engineering sign-off. The rating book, the LMI and the people on site govern.</p>`:""}</div>`}
 function findingsTable(p,R){const g=R.site;if(!g)return "";
   const row=(k,m,pl,ok)=>`<tr><td>${k}</td><td class="n">${m}</td><td class="n">${pl}</td><td>${ok==null?"–":ok?"<span class='ok'>matches</span>":"<b class='warn'>differs</b>"}</td></tr>`;
   const near=(a,b,t)=>a==null?null:Math.abs(a-b)<=t;
@@ -657,6 +722,7 @@ function tabCheck(){const p=plan(),R=calc(p),c=R.chart,g=R.geom,gr=R.ground;
     ${p.mats?field("matL","Mat length (m)","number",'step="0.1"')+field("matW","Mat width (m)","number",'step="0.1"')+(c&&c.type==="outrigger"?"":field("matN","Number of mats (total)","number",'step="1" min="1"')):""}</div>
     ${gr?`<div class="kpis" style="margin-top:12px"><div class="kpi"><div class="kicker">Crane + load</div><div class="v">${fmt(gr.total,1)} <small>t</small></div></div>${gr.padLoad!=null?`<div class="kpi"><div class="kicker">On one pad (${PAD_SHARE*100} %)</div><div class="v">${fmt(gr.padLoad,1)} <small>t</small></div></div>`:""}${gr.avg!=null?`<div class="kpi"><div class="kicker">Average on tracks</div><div class="v">${fmt(gr.avg,0)} <small>kPa</small></div></div>`:""}${gr.padAvg!=null?`<div class="kpi"><div class="kicker">On the pad</div><div class="v">${fmt(gr.padAvg,0)} <small>kPa</small></div></div>`:""}${gr.matAvg!=null?`<div class="kpi"><div class="kicker">On mats</div><div class="v">${fmt(gr.matAvg,0)} <small>kPa</small></div></div>`:""}${gr.design!=null?`<div class="kpi ${gr.ok===false?"bad":gr.ok?"good":""}"><div class="kicker">Design · ${esc(gr.label)}</div><div class="v">${fmt(gr.design,0)} <small>kPa</small></div></div>`:""}</div>`:`<p class="small muted" style="margin-top:10px">Enter the operating weight (on the chart or as an override) to estimate ground pressure.</p>`}
     <p class="small muted">${c&&c.type==="outrigger"?`A simple estimate: ${PAD_SHARE*100} % of crane plus gross load taken on one outrigger pad, spread over the pad (or the mat under it). Use the manufacturer's outrigger load tables where the margin is tight, and the geotech's allowable pressure for the set-up position.`:`A simple estimate: crane plus gross load spread over the track (or mat) contact area, doubled because slewing over the side puts most of the weight on one track. Use the manufacturer's ground pressure tables where the margin is tight, and the geotech's allowable pressure for the set-up position.`}</p></div>
+  ${aiReviewCard(p)}
   <div class="card"><div class="kicker">Pre-lift checks</div><h3>Controls</h3>
     ${CHECKS.map(([k,l])=>`<label class="chk"><input type="checkbox" data-check="${k}" ${p.checks&&p.checks[k]?"checked":""}>${esc(l)}</label>`).join("")}
     <label class="f" style="margin-top:12px">Notes<textarea data-k="notes" style="font-family:var(--sans)">${esc(p.notes)}</textarea></label></div>`}
@@ -771,6 +837,7 @@ document.addEventListener("input",e=>{const t=e.target,p=plan();
     save();if(t.type==="number"||t.type==="checkbox"||t.tagName==="SELECT"){rerenderKeepingFocus();return}
     if(k==="title"||k==="description")$("#planTitle").textContent=planName(p);renderStrip();return}
   if(t.dataset.set!==undefined){S.settings[t.dataset.set]=t.type==="number"?num(t.value):t.value;save();renderStrip();return}
+  if(t.dataset.ai!==undefined){ai()[t.dataset.ai]=t.value.trim();save();if(t.dataset.ai==="key"){const on=!!t.value.trim();$("#aiTest").disabled=!on;$("#aiForget").disabled=!on}return}
   if(t.dataset.flag){p.flags=p.flags||{};p.flags[t.dataset.flag]=t.checked;save();renderStrip();return}
   if(t.dataset.check){p.checks=p.checks||{};p.checks[t.dataset.check]=t.checked;save();return}
   if(t.dataset.obsth!==undefined&&p.site&&p.site.obst){const o=p.site.obst[+t.dataset.obsth];if(o){o.h=t.value===""?"":num(t.value);save();rerenderKeepingFocus()}return}
@@ -790,7 +857,7 @@ document.addEventListener("change",e=>{if(e.target.id==="planSel"){S.planId=e.ta
     if(d.attachments)Object.entries(d.attachments).forEach(([k,v])=>{if(Array.isArray(v)&&v.length){S.attach[k]=v;saveAttach(k)}});
     if(d.siteImages)Object.entries(d.siteImages).forEach(([k,v])=>{if(v&&v.dataUrl){S.site[k]=v;saveSite(k)}});
     (d.plans||[]).forEach(p=>{if(p&&p.id){const i=S.plans.findIndex(x=>x.id===p.id);if(i>=0)S.plans[i]=p;else S.plans.push(p)}});
-    if(d.settings)S.settings={...S.settings,...d.settings};save();render();toast(`Imported ${(d.plans||[]).length} plans and ${(d.charts||[]).length} charts`)}).catch(()=>toast("That file isn't a lift planner export"));e.target.value=""}});
+    if(d.settings){const keep=S.settings.ai;S.settings={...S.settings,...d.settings,ai:keep}}save();render();toast(`Imported ${(d.plans||[]).length} plans and ${(d.charts||[]).length} charts`)}).catch(()=>toast("That file isn't a lift planner export"));e.target.value=""}});
 document.addEventListener("click",e=>{if(e.target.closest("#site")&&S.tab==="site"){siteClick(e);return}
   const t=e.target.closest("button,[data-tab],[data-zoom]");if(!t)return;const p=plan();
   if(t.dataset.zoom!==undefined){t.closest("figure").classList.toggle("zoom");return}
@@ -813,7 +880,14 @@ document.addEventListener("click",e=>{if(e.target.closest("#site")&&S.tab==="sit
         ["cwt","hookMass","hookLen","pivotH","pivotX","opWeight","trackLen","shoeW","maxWind","outBase","outWidth","padL","padW"].forEach(k=>out[k]=num(out[k]));out.demo=false;
         const i=S.charts.findIndex(x=>x.id===out.id);if(i>=0)S.charts[i]=out;else S.charts.push(out);p.chartId=out.id;p.boom=null;S.editChart=null;S.extracted=null;save();render();toast("Chart saved")}catch(err){toast(err.message)}return}
     case "rigAdd":{p.rig=p.rig||[];p.rig.push({name:"",mass:0,wll:"",qty:1});save();render();return}
-    case "exportAll":{const blob=new Blob([JSON.stringify({plans:S.plans,charts:S.charts,attachments:S.attach,siteImages:S.site,settings:S.settings,exportedAt:new Date().toISOString()},null,1)],{type:"application/json"});const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download=`lift-planner-${today()}.json`;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),2000);return}
+    case "exportAll":{const blob=new Blob([JSON.stringify({plans:S.plans,charts:S.charts,attachments:S.attach,siteImages:S.site,settings:{...S.settings,ai:undefined},exportedAt:new Date().toISOString()},null,1)],{type:"application/json"});const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download=`lift-planner-${today()}.json`;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),2000);return}
+    case "aiTest":{aiRun("test",async()=>{const {data}=await askClaude({system:"Reply with ok set to true.",content:[{type:"text",text:"Test"}],schema:{type:"object",properties:{ok:{type:"boolean"}},required:["ok"],additionalProperties:false},effort:"low",maxTokens:2000});if(!data.ok)throw new Error("Unexpected answer")});return}
+    case "aiForget":{delete S.settings.ai;save();render();toast("Key forgotten");return}
+    case "aiChart":{const c=S.editChart;if(c)aiRun("chart",()=>aiReadChart(c));return}
+    case "aiSite":{aiRun("site",()=>aiDescribeSite(p));return}
+    case "aiSiteApply":{const r=p.ai&&p.ai.site;if(!r)return;const txt=r.hazards.map(h=>`${h.hazard} – ${h.control}`).join("\n");p.hazards=(p.hazards?p.hazards.trim()+"\n":"")+txt;save();render();toast("Added to the site-specific hazards – edit them on the Lift step");return}
+    case "aiReview":{aiRun("review",()=>aiReview(p));return}
+    case "aiReviewApply":{const r=p.ai&&p.ai.review;if(!r)return;const txt="Review notes: "+r.findings.map(f=>`[${f.severity}] ${f.finding} – ${f.action}`).join("; ")+(r.missing.length?" Missing: "+r.missing.join("; "):"");p.notes=(p.notes?p.notes.trim()+"\n":"")+txt;save();render();toast("Added to the notes");return}
     case "printBtn":{window.print();return}
     case "backBtn":{S.tab="check";render();return}}
   if(t.dataset.rigdel!==undefined){p.rig.splice(+t.dataset.rigdel,1);save();render();return}

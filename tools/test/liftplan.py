@@ -7,7 +7,7 @@ hook height, ground bearing), adds a crane and chart through the rating-book edi
 table imported from CSV with blank cells, printed appendix, outrigger pad pressure, pages kept across a reload),
 prints the plan document to PDF and checks it with pypdf, and screenshots every step at phone width.
 Exits non-zero on any JS error or failed check."""
-import asyncio, sys, pathlib, subprocess, math, re, base64
+import asyncio, sys, pathlib, subprocess, math, re, base64, json
 from playwright.async_api import async_playwright
 ROOT = pathlib.Path(__file__).resolve().parents[2]  # project root
 OUT = pathlib.Path(sys.argv[1] if len(sys.argv) > 1 else ROOT / "tools/test/out"); OUT.mkdir(parents=True, exist_ok=True)
@@ -157,6 +157,52 @@ async def main():
             await pg.click("#applySite"); await pg.wait_for_timeout(200)
             s = await strip(pg); assert "40.00 t" in s and "6.0 m" in s, s      # set 5 m -> next rated radius 6 m on the 24 m boom
             txt = await pg.inner_text("#body"); assert "differs" not in txt and txt.count("matches") >= 3, txt[-600:]
+
+            # AI assistant with the planner's own key: the Messages API is mocked, the request shape and the
+            # way answers land in the plan are what is checked
+            calls = []
+            async def fake_api(route):
+                body = json.loads(route.request.post_data); calls.append((route.request.headers, body))
+                props = body["output_config"]["format"]["schema"]["properties"]
+                if "booms" in props: data = {"booms": [24, 30], "rows": [{"radius": 6, "caps": [40, None]}, {"radius": 8, "caps": [None, 28]}], "notes": ["capacities in t"]}
+                elif "summary" in props: data = {"summary": "Open yard beside an excavation.", "hazards": [{"hazard": "Edge of excavation 3 m from the tracks", "control": "Keep the crane back at least the depth of the excavation"}], "verify": ["Depth of the excavation"]}
+                elif "verdict" in props: data = {"verdict": "needs_changes", "findings": [{"severity": "high", "finding": "Utilisation 78% on a demo chart", "action": "Enter the rating book chart"}], "missing": ["Ground bearing from the geotech"]}
+                else: data = {"ok": True}
+                await route.fulfill(status=200, content_type="application/json", body=json.dumps({"id": "msg_test", "type": "message", "model": body["model"], "stop_reason": "end_turn",
+                    "content": [{"type": "text", "text": json.dumps(data)}], "usage": {"input_tokens": 1, "output_tokens": 1}}))
+            await pg.route("https://api.anthropic.com/**", fake_api)
+            await pg.click('[data-tab="lift"]'); await pg.wait_for_timeout(200)
+            assert await pg.locator("#aiTest").is_disabled()                      # no key, nothing can be sent
+            await pg.fill('[data-ai="key"]', "sk-ant-test-key"); await pg.dispatch_event('[data-ai="key"]', "input")
+            await pg.click("#aiTest"); await pg.wait_for_timeout(400)
+            h, b = calls[-1]
+            assert h["x-api-key"] == "sk-ant-test-key" and h["anthropic-version"] == "2026-10-21" and h["anthropic-dangerous-direct-browser-access"] == "true", h
+            assert b["model"] == "claude-opus-5-5" and b["fallbacks"] == "default" and b["output_config"]["format"]["type"] == "json_schema", b
+            await fits(pg, "lift tab with AI settings")
+            # a photographed chart read into the rating table
+            await pg.click('[data-tab="crane"]'); await pg.wait_for_timeout(200)
+            await pg.click("[data-editchart]"); await pg.wait_for_timeout(150)
+            await pg.click("#aiChart"); await pg.wait_for_selector("#useExtracted", timeout=5000)
+            assert any(x.get("type") == "image" for x in calls[-1][1]["messages"][0]["content"]), "chart page not sent as an image"
+            await pg.click("#useExtracted"); await pg.wait_for_timeout(150)
+            assert await pg.input_value('[data-c="grid"]') == "Radius\t24\t30\n6\t40\t-\n8\t-\t28", await pg.input_value('[data-c="grid"]')
+            await pg.click("#cancelChart"); await pg.wait_for_timeout(150)
+            # the lift scene from the site image, added to the hazards
+            await pg.click('[data-tab="site"]'); await pg.wait_for_timeout(200)
+            await pg.click("#aiSite"); await pg.wait_for_selector("#aiSiteApply", timeout=5000)
+            assert "Open yard beside an excavation." in await pg.inner_text("#body")
+            await pg.click("#aiSiteApply"); await pg.wait_for_timeout(150)
+            await pg.click('[data-tab="lift"]'); await pg.wait_for_timeout(200)
+            assert "Edge of excavation 3 m from the tracks – Keep the crane back" in await pg.input_value('[data-k="hazards"]')
+            # the plan review, added to the notes
+            await pg.click('[data-tab="check"]'); await pg.wait_for_timeout(200)
+            await pg.click("#aiReview"); await pg.wait_for_selector("#aiReviewApply", timeout=5000)
+            txt = (await pg.inner_text("#body")).lower(); assert "needs changes" in txt and "utilisation 78% on a demo chart" in txt, txt[:1200]
+            assert calls[-1][1]["output_config"]["effort"] == "high" and "gross_t" in calls[-1][1]["messages"][0]["content"][0]["text"]
+            await pg.click("#aiReviewApply"); await pg.wait_for_timeout(150)
+            assert "Review notes: [high] Utilisation 78%" in await pg.input_value('[data-k="notes"]')
+            await pg.screenshot(path=OUT / "lp-05d-ai.png", full_page=True)
+            await pg.unroute("https://api.anthropic.com/**")
 
             # plan document: back on the demo chart (banner), print to PDF
             await pg.click('[data-tab="crane"]'); await pg.wait_for_timeout(200)
