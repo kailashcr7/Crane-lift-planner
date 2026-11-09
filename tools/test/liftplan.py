@@ -3,14 +3,16 @@
 Usage: python3 tools/test/liftplan.py [outdir]
 
 Checks the demo-chart arithmetic (gross load, chart lookup at the next radius, utilisation, classification,
-hook height, ground bearing), adds a chart through the rating-book editor (tab-separated with blank cells),
-prints the plan document to PDF and checks it with pypdf, and screenshots every tab at phone width.
+hook height, ground bearing), adds a crane and chart through the rating-book editor (page uploaded as an image,
+table imported from CSV with blank cells, printed appendix, outrigger pad pressure, pages kept across a reload),
+prints the plan document to PDF and checks it with pypdf, and screenshots every step at phone width.
 Exits non-zero on any JS error or failed check."""
-import asyncio, sys, pathlib, subprocess, math, re
+import asyncio, sys, pathlib, subprocess, math, re, base64
 from playwright.async_api import async_playwright
 ROOT = pathlib.Path(__file__).resolve().parents[2]  # project root
 OUT = pathlib.Path(sys.argv[1] if len(sys.argv) > 1 else ROOT / "tools/test/out"); OUT.mkdir(parents=True, exist_ok=True)
 PORT = 8792
+PNG = base64.b64decode("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==")  # 1×1 px
 LAYOUT = """(()=>{const de=document.documentElement,out=[...document.querySelectorAll('#app input,#app select,#app textarea')].filter(e=>!['hidden','checkbox','radio','file'].includes(e.type)&&parseFloat(getComputedStyle(e).fontSize)<16).map(e=>'field under 16px: '+(e.dataset.k||e.dataset.c||e.id||e.className));
   if(de.scrollWidth>de.clientWidth)out.push('page wider than screen by '+(de.scrollWidth-de.clientWidth)+'px');return out})()"""
 
@@ -87,15 +89,22 @@ async def main():
             await pg.check('[data-check="weight"]'); await pg.check('[data-check="comms"]')
             await fits(pg, "checks tab"); await pg.screenshot(path=OUT / "lp-04-check.png", full_page=True)
 
-            # rating-book editor: tab-separated grid with a blank cell must keep its columns
+            # rating-book editor: any make and model, a chart page uploaded as an image, the table from a CSV
+            # file in which a blank cell must keep its column
             await pg.click('[data-tab="crane"]'); await pg.wait_for_timeout(200)
             await pg.click("#openEditor"); await pg.wait_for_timeout(150)
-            await pg.fill('[data-c="name"]', "683 E test chart"); await pg.dispatch_event('[data-c="name"]', "input")
-            await pg.fill('[data-c="pivotH"]', "2.3"); await pg.dispatch_event('[data-c="pivotH"]', "input")
-            grid = "Radius\t24\t30\n6\t40\t\n8\t\t28\n10\t30\t24\n12\t-\t20"
-            await pg.fill('[data-c="grid"]', grid); await pg.dispatch_event('[data-c="grid"]', "input")
+            for key, val in [("make", "Sennebogen"), ("model", "683 E"), ("name", "683 E test chart"), ("pivotH", "2.3")]:
+                await pg.fill(f'[data-c="{key}"]', val); await pg.dispatch_event(f'[data-c="{key}"]', "input")
+            await pg.set_input_files("#chartFiles", {"name": "chart-page.png", "mimeType": "image/png", "buffer": PNG})
+            await pg.wait_for_selector(".pages img", timeout=10000)
+            assert await pg.locator(".pages img").count() == 1
+            csv = "Radius,24,30\n6,40,\n8,,28\n10,30,24\n12,-,20\n"
+            await pg.set_input_files("#gridFile", {"name": "grid.csv", "mimeType": "text/csv", "buffer": csv.encode()})
+            await pg.wait_for_timeout(300)
+            assert (await pg.input_value('[data-c="grid"]')).startswith("Radius\t24\t30\n6\t40\t\n8\t\t28"), await pg.input_value('[data-c="grid"]')
             await pg.click("#saveChart"); await pg.wait_for_timeout(250)
-            assert "683 E test chart" in await pg.inner_text("#body")
+            body = await pg.inner_text("#body"); assert "683 E test chart" in body and "Sennebogen 683 E" in body, body[:300]
+            assert await pg.locator(".pages img").count() == 1   # shown with the rating table
             cells = await pg.eval_on_selector_all(".tablewrap tbody tr", "rows=>rows.map(r=>[...r.children].map(c=>c.textContent.trim()))")
             assert cells[1] == ["8.0 m", "–", "28.0"], cells
             assert cells[3][1] == "–" and cells[3][2] == "20.0", cells
@@ -105,7 +114,27 @@ async def main():
             await pg.screenshot(path=OUT / "lp-05-chart.png", full_page=True)
             charts = await pg.evaluate("JSON.parse(localStorage.getItem('lp.charts')).length"); assert charts == 2
 
+            # the uploaded page prints as an appendix to the plan built on this chart
+            await pg.click('[data-tab="doc"]'); await pg.wait_for_timeout(300)
+            sheet = await pg.inner_text("#sheet")
+            assert "Appendix" in sheet and await pg.locator("#sheet img.attach").count() == 1, sheet[-400:]
+
+            # the same crane on outriggers: 75 % of crane + load on one 0.6 x 0.6 m pad
+            await pg.click('[data-tab="crane"]'); await pg.wait_for_timeout(200)
+            await pg.click("[data-editchart]"); await pg.wait_for_timeout(150)
+            await pg.select_option('[data-c="type"]', "outrigger"); await pg.dispatch_event('[data-c="type"]', "input"); await pg.wait_for_timeout(150)
+            for key, val in [("padL", "0.6"), ("padW", "0.6"), ("opWeight", "60")]:
+                await pg.fill(f'[data-c="{key}"]', val); await pg.dispatch_event(f'[data-c="{key}"]', "input")
+            await pg.click("#saveChart"); await pg.wait_for_timeout(250)
+            assert "outriggers" in (await pg.inner_text("#body")).lower()
+            await pg.click('[data-tab="check"]'); await pg.wait_for_timeout(200)
+            txt = await pg.inner_text("#body")
+            pad = 0.75 * (60 + 2.3 * 1.1 + 0.10) * 9.81 / 0.36          # no hook block mass on this chart
+            assert f"{pad:,.0f}" in txt and "one outrigger pad" in txt, (pad, txt[:900])
+            await pg.screenshot(path=OUT / "lp-05b-outrigger.png", full_page=True)
+
             # plan document: back on the demo chart (banner), print to PDF
+            await pg.click('[data-tab="crane"]'); await pg.wait_for_timeout(200)
             await set_field(pg, "chartId", "demo"); await set_field(pg, "boom", "42"); await set_field(pg, "setR", "30")
             await pg.click('[data-tab="doc"]'); await pg.wait_for_timeout(300)
             sheet = await pg.inner_text("#sheet")
@@ -127,9 +156,10 @@ async def main():
             for f in OUT.glob("lp-plan-*.png"): f.unlink()
             subprocess.run(["pdftoppm", "-png", "-r", "60", str(pdf), str(OUT / "lp-plan")], check=False)
 
-            # plans persist across a reload; duplicate and delete
-            await pg.reload(); await pg.wait_for_timeout(400)
+            # plans and uploaded pages persist across a reload; duplicate and delete
+            await pg.reload(); await pg.wait_for_timeout(600)
             assert "Test lift – precast panel" in await pg.inner_text("#planTitle")
+            assert await pg.evaluate("Object.values(S.attach).flat().length") == 1
             await pg.click("#dupPlan"); await pg.wait_for_timeout(150)
             assert await pg.locator("#planSel option").count() == 2
             pg.on("dialog", lambda d: asyncio.ensure_future(d.accept()))

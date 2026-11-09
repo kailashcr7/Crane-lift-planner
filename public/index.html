@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#fbfbf9">
-<title>Lift plan – Sennebogen cranes</title>
+<title>Lift plan – mobile and crawler cranes</title>
 <style>
 @font-face{font-family:'IBM Plex Serif';font-style:normal;font-weight:400;font-display:swap;src:url(fonts/IBMPlexSerif-Regular.woff2) format('woff2')}
 @font-face{font-family:'IBM Plex Serif';font-style:normal;font-weight:600;font-display:swap;src:url(fonts/IBMPlexSerif-SemiBold.woff2) format('woff2')}
@@ -120,6 +120,11 @@ tr.hit td{background:var(--blue);font-weight:500}
 .toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:var(--navy);color:#fff;padding:10px 16px;font-size:14px;opacity:0;transition:opacity .2s;pointer-events:none;z-index:40}
 .toast.on{opacity:1}
 .hidden{display:none!important}
+.pages{display:flex;flex-wrap:wrap;gap:10px;margin:8px 0}
+.pages figure{margin:0;width:120px;position:relative}.pages figure.zoom{width:100%}
+.pages img{display:block;width:100%;border:1px solid var(--rule-soft);cursor:zoom-in;background:#fff}.pages figure.zoom img{cursor:zoom-out}
+.pages figcaption{font-size:11px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:3px}
+.pages .del{position:absolute;top:4px;right:4px;width:28px;height:28px;border:1px solid var(--red);background:#fff;color:var(--red);cursor:pointer;font-size:12px;line-height:1}
 .rig-row{display:grid;grid-template-columns:2fr 1fr 1fr 1fr auto;gap:8px;align-items:end;margin-bottom:8px}
 @media (max-width:560px){.rig-row{grid-template-columns:1fr 1fr 1fr}.rig-row .f:first-child{grid-column:1/-1}}
 /* ── printed plan ── */
@@ -144,6 +149,8 @@ body.preview #body,body.preview .strip{display:none}body.preview #sheet{display:
 .sheet .chk i.on{background:#0b1f3a}
 .sheet .foot{margin-top:10px;font-size:10px;color:#5a6270;border-top:1px solid #cfd5dd;padding-top:6px}
 .sheet .keep{break-inside:avoid}
+.sheet .appendix{break-before:page;margin-top:18px;padding-top:12px;border-top:1px dashed #cfd5dd}
+.sheet figure.attach{margin:8px 0;break-inside:avoid}.sheet img.attach{display:block;max-width:100%;max-height:235mm;border:1px solid #cfd5dd}.sheet figure.attach figcaption{font-size:10.5px;color:#5a6270;margin-top:3px}
 .sheet .n{font-family:var(--mono)}
 .doctools{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:14px}
 @media print{
@@ -155,7 +162,7 @@ body.preview #body,body.preview .strip{display:none}body.preview #sheet{display:
 </head>
 <body>
 <header class="top"><div class="topbar">
-  <div class="brand"><span class="mark">LP</span><div><b>Lift plan</b><small>Sennebogen telescopic crawler cranes</small></div></div>
+  <div class="brand"><span class="mark">LP</span><div><b>Lift plan</b><small>Mobile and crawler cranes</small></div></div>
   <div class="sp"></div>
   <div class="brand"><span class="doc" id="docRef"></span></div>
 </div></header>
@@ -194,11 +201,12 @@ body.preview #body,body.preview .strip{display:none}body.preview #sheet{display:
 <script>
 "use strict";
 /* ─────────────────────────────────────────────────────────────────────────────
-   Lift planner for Sennebogen telescopic crawler cranes.
-   Standalone, no Firebase – plans and load charts live in localStorage on this device
-   (export/import JSON to move them). Capacities are read from a chart you enter from the
-   machine's rating book; nothing here replaces the crane's load moment indicator or the
-   rating book, and critical lifts still need an engineered lift study.
+   Lift planner for mobile and crawler cranes of any make.
+   Standalone, no backend – plans and load charts live in localStorage on this device and the
+   uploaded rating-book pages in IndexedDB (export/import JSON to move them). Capacities are
+   read from a chart you enter from the machine's rating book; nothing here replaces the
+   crane's load moment indicator or the rating book, and critical lifts still need an
+   engineered lift study.
    ───────────────────────────────────────────────────────────────────────────── */
 const $=s=>document.querySelector(s),$$=s=>[...document.querySelectorAll(s)];
 const esc=s=>String(s==null?"":s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
@@ -213,21 +221,33 @@ let toastT;function toast(m){const t=$("#toast");t.textContent=m;t.classList.add
 /* Sennebogen range – indicative headline figures from public sources only. They are shown for
    orientation and used to sanity-check an entered chart; every capacity used in a check comes
    from the chart you enter from the machine's own rating book. */
-const MODELS=[
-  {id:"613E",name:"613 E",cap:16,note:"16 t class telescopic crawler"},
-  {id:"643E",name:"643 E",cap:40,boom:30,note:"40 t, 30 m main boom"},
-  {id:"653E",name:"653 E",cap:50,boom:30.4,hookH:43,note:"50 t, hook height to 43 m"},
-  {id:"673E",name:"673 E",cap:70,hookH:51,note:"70 t, hook height to 51 m"},
-  {id:"683E",name:"683 E",cap:80,boom:42,hookH:57,note:"80 t, 42 m four-section boom, 57 m with jib, track width 2.68–4.2 m (chart follows track setting)"},
-  {id:"6103E",name:"6103 E",cap:100,boomMax:62,note:"100 t, boom systems to 62 m"},
-  {id:"6113E",name:"6113 E",cap:120,boom:46.8,boomMax:62,hookH:67,note:"120 t, 46.8 m pinned boom, 62 m with extension and jib"},
-  {id:"6133E",name:"6133 E",cap:130,hookH:67,note:"130 t, hook height to 67 m"},
-  {id:"other",name:"Other Sennebogen / custom",note:""}];
-const modelOf=id=>MODELS.find(m=>m.id===id)||MODELS[MODELS.length-1];
+/* Crane suggestions – indicative headline figures from public sources only. Any make and model can be
+   typed; a match here only adds a note and a sanity check on the entered chart. */
+const SUGGEST=[
+  {make:"Sennebogen",model:"613 E",cap:16,note:"16 t class telescopic crawler"},
+  {make:"Sennebogen",model:"643 E",cap:40,note:"40 t, 30 m main boom"},
+  {make:"Sennebogen",model:"653 E",cap:50,note:"50 t, hook height to 43 m"},
+  {make:"Sennebogen",model:"673 E",cap:70,note:"70 t, hook height to 51 m"},
+  {make:"Sennebogen",model:"683 E",cap:80,note:"80 t, 42 m four-section boom, 57 m with jib, track width 2.68–4.2 m (chart follows track setting)"},
+  {make:"Sennebogen",model:"6103 E",cap:100,note:"100 t, boom systems to 62 m"},
+  {make:"Sennebogen",model:"6113 E",cap:120,note:"120 t, 46.8 m pinned boom, 62 m with extension and jib"},
+  {make:"Sennebogen",model:"6133 E",cap:130,note:"130 t, hook height to 67 m"},
+  {make:"Liebherr",model:"LTM 1060-3.1",cap:60,note:"60 t all-terrain, 48 m telescopic boom"},
+  {make:"Liebherr",model:"LTM 1100-5.2",cap:100,note:"100 t all-terrain, 52 m telescopic boom"},
+  {make:"Liebherr",model:"LR 1300",cap:300,note:"300 t lattice-boom crawler"},
+  {make:"Grove",model:"GMK5150L",cap:150,note:"150 t all-terrain, 60 m boom"},
+  {make:"Tadano",model:"ATF 220G-5",cap:220,note:"220 t all-terrain"},
+  {make:"Kobelco",model:"CKE2500G",cap:250,note:"250 t lattice-boom crawler"},
+  {make:"Franna",model:"AT 40",cap:40,note:"40 t pick-and-carry – chart depends on articulation and slope"}];
+const norm=s=>String(s||"").toLowerCase().replace(/[\s-]/g,"");
+const suggestionFor=c=>c?SUGGEST.find(x=>norm(x.make)===norm(c.make)&&norm(x.model)===norm(c.model))||null:null;
+const craneName=c=>[c.make,c.model].filter(Boolean).join(" ")||"Crane";
+const craneType=c=>c.type==="outrigger"?"Mobile crane on outriggers":"Crawler crane";
+const PAD_SHARE=0.75; // share of crane + load assumed on one outrigger pad – a common conservative planning figure
 
 /* A fictitious chart so the tool can be tried before a real rating book is entered.
-   It is NOT a Sennebogen rating – every plan built on it prints a warning banner. */
-const DEMO_CHART={id:"demo",demo:true,name:"DEMO chart – fictitious 80 t class (not a rating)",model:"683E",
+   It is NOT a manufacturer's rating – every plan built on it prints a warning banner. */
+const DEMO_CHART={id:"demo",demo:true,name:"DEMO chart – fictitious 80 t class (not a rating)",make:"Sennebogen",model:"683 E",type:"crawler",
   cfg:"Main boom, 360°, tracks extended, full counterweight (fictitious)",cwt:24,includesHook:false,hookMass:0.8,hookLen:2.0,
   pivotH:2.2,pivotX:1.0,opWeight:92,trackLen:7.6,shoeW:0.9,maxWind:9.8,source:"Demo data – replace with the rating book for the machine on site",
   booms:[13.5,24,30,36,42],radii:[4,5,6,7,8,9,10,12,14,16,18,20,22,24,26,28,30,32,34,36,38],
@@ -235,7 +255,7 @@ const DEMO_CHART={id:"demo",demo:true,name:"DEMO chart – fictitious 80 t class
 
 const CHECKS=[
   ["weight","Load weight verified from drawings, weighbridge or calculation (source recorded)"],
-  ["config","Crane configuration on site matches this plan and the LMI is set to it (boom, counterweight, track width, slew range)"],
+  ["config","Crane configuration on site matches this plan and the LMI is set to it (boom, counterweight, track or outrigger setting, slew range)"],
   ["ground","Ground assessed: bearing capacity confirmed, mats placed, no services, voids or soft fill under the tracks"],
   ["edge","Tracks kept back from excavations and unsupported edges (at least the depth of the excavation unless engineered)"],
   ["exclusion","Exclusion zone set out, barricaded and tagged – no person under or near the suspended load"],
@@ -261,9 +281,11 @@ const FLAGS=[
 /* ── state ── */
 const S={plans:store.get("plans",[]),charts:store.get("charts",null),settings:store.get("settings",{critPct:75,minClear:0.5,company:"",project:""}),tab:"lift",planId:store.get("planId",null)};
 if(!S.charts){S.charts=[DEMO_CHART];store.set("charts",S.charts)}
+S.charts.forEach(c=>{if(!c.make&&/^\d+E$/.test(c.model||"")){c.make="Sennebogen";c.model=c.model.replace(/E$/," E")}else if(c.model==="other"){c.model=""}if(!c.type)c.type="crawler"});
+S.attach={}; // chart id → [{id,name,dataUrl}] rating-book pages, loaded from IndexedDB at start
 function newPlan(){return {id:uid(),createdAt:Date.now(),title:"",liftNo:"",date:today(),time:"",location:"",description:"",
   liftSupervisor:"",operator:"",dogman:"",preparedBy:"",permitNo:"",
-  model:"683E",chartId:S.charts[0]?S.charts[0].id:"",boom:null,pickR:8,setR:10,slewDeg:90,
+  chartId:S.charts[0]?S.charts[0].id:"",boom:null,pickR:8,setR:10,slewDeg:90,
   loadMass:5,loadSource:"calculated",allowPct:10,loadL:"",loadW:"",loadH:1.0,cog:"",
   rig:[{name:"Slings (2 leg chain)",mass:0.06,wll:8.0,qty:1},{name:"Shackles",mass:0.02,wll:8.5,qty:2}],
   legs:2,legAngle:45,allLegs:false,rigH:2.0,
@@ -300,7 +322,7 @@ function capAt(c,bi,R){
 
 /* ── the calculation ── */
 function calc(p){
-  const c=chartOf(p.chartId),m=modelOf(p.model),R={chart:c,model:m,warnings:[],fails:[]};
+  const c=chartOf(p.chartId),sg=suggestionFor(c),R={chart:c,crane:c?craneName(c):"–",warnings:[],fails:[]};
   const bi=c&&p.boom!=null?c.booms.indexOf(num(p.boom)):-1;R.bi=bi>=0?bi:(c?0:-1);R.boom=c?c.booms[R.bi]:null;
   // load
   R.allow=num(p.loadMass)*num(p.allowPct)/100;
@@ -317,7 +339,7 @@ function calc(p){
   else if(R.cap==null)R.fails.push("Radius is "+gov.why+".");
   else if(R.pct>100)R.fails.push(`Gross load ${fmt(R.gross,2)} t exceeds the rated capacity ${fmt(R.cap,2)} t at ${fmt(gov.chartR)} m – not permitted.`);
   if(gov.below)R.warnings.push(`Working radius is inside the chart's minimum radius (${fmt(gov.below)} m) – confirm the boom can reach that close.`);
-  if(c&&m.cap&&c.cap.some(r=>r.some(v=>v>m.cap)))R.warnings.push(`The chart has ratings above the ${m.name} headline capacity of ${m.cap} t – check the chart entry.`);
+  if(c&&sg&&sg.cap&&c.cap.some(r=>r.some(v=>v>sg.cap)))R.warnings.push(`The chart has ratings above the ${sg.make} ${sg.model} headline capacity of ${sg.cap} t – check the chart entry.`);
   if(c&&c.demo)R.warnings.push("The DEMO chart is fictitious. Enter the rating book chart for the machine before this plan is used.");
   // classification
   const crit=num(S.settings.critPct)||75;R.critPct=crit;R.flagHits=FLAGS.filter(([k])=>p.flags&&p.flags[k]).map(([,l])=>l);
@@ -340,11 +362,17 @@ function calc(p){
   else if(c)R.warnings.push("Enter the boom pivot height and offset on the chart to check hook height and boom clearance.");
   // ground bearing
   R.ground=null;const opW=num(p.opWeightOvr)||(c?num(c.opWeight):0);
-  if(opW>0){const total=opW+R.gross,g9=9.81,gr={opW,total};
-    if(c&&c.trackLen>0&&c.shoeW>0){gr.trackArea=2*num(c.trackLen)*num(c.shoeW);gr.avg=total*g9/gr.trackArea;gr.oneTrack=gr.avg*2}
-    if(p.mats&&num(p.matL)>0&&num(p.matW)>0){gr.matArea=num(p.matL)*num(p.matW)*Math.max(1,num(p.matN));gr.matAvg=total*g9/gr.matArea;gr.matOne=gr.matAvg*2}
-    gr.design=gr.matArea?gr.matOne:gr.oneTrack;gr.allow=num(p.bearing);
-    if(gr.allow>0&&gr.design!=null){gr.ok=gr.design<=gr.allow;if(!gr.ok)R.fails.push(`Ground pressure ${fmt(gr.design,0)} kPa (one track loaded) exceeds the allowable ${fmt(gr.allow,0)} kPa – mats or a better set-up position.`)}
+  if(opW>0){const total=opW+R.gross,g9=9.81,outr=!!(c&&c.type==="outrigger"),gr={opW,total,outrigger:outr,label:outr?"one outrigger pad":"one track loaded"};
+    if(outr){gr.padLoad=total*PAD_SHARE;
+      if(c&&num(c.padL)>0&&num(c.padW)>0){gr.padArea=num(c.padL)*num(c.padW);gr.padAvg=gr.padLoad*g9/gr.padArea}
+      if(p.mats&&num(p.matL)>0&&num(p.matW)>0){gr.matArea=num(p.matL)*num(p.matW);gr.matAvg=gr.padLoad*g9/gr.matArea}
+      gr.design=gr.matArea?gr.matAvg:gr.padAvg;
+      if(gr.design==null)R.warnings.push("Enter the outrigger pad size on the chart (or tick mats and give their size) to estimate ground pressure.")}
+    else{if(c&&c.trackLen>0&&c.shoeW>0){gr.trackArea=2*num(c.trackLen)*num(c.shoeW);gr.avg=total*g9/gr.trackArea;gr.oneTrack=gr.avg*2}
+      if(p.mats&&num(p.matL)>0&&num(p.matW)>0){gr.matArea=num(p.matL)*num(p.matW)*Math.max(1,num(p.matN));gr.matAvg=total*g9/gr.matArea;gr.matOne=gr.matAvg*2}
+      gr.design=gr.matArea?gr.matOne:gr.oneTrack}
+    gr.allow=num(p.bearing);
+    if(gr.allow>0&&gr.design!=null){gr.ok=gr.design<=gr.allow;if(!gr.ok)R.fails.push(`Ground pressure ${fmt(gr.design,0)} kPa (${gr.label}) exceeds the allowable ${fmt(gr.allow,0)} kPa – mats or a better set-up position.`)}
     else if(gr.design!=null)R.warnings.push("Enter the allowable ground bearing pressure (from the geotech) to check the set-up.");
     R.ground=gr}
   // slings
@@ -355,6 +383,39 @@ function calc(p){
   if(isFinite(minWll)){R.sling.minWll=minWll;if(R.sling.tension>minWll)R.fails.push(`Leg tension ${fmt(R.sling.tension,2)} t exceeds the lowest gear WLL ${fmt(minWll,2)} t.`)}
   if(c&&num(c.maxWind)>0)R.maxWind=num(c.maxWind);
   R.ok=R.fails.length===0;return R}
+
+/* ── rating-book pages (IndexedDB – images are too large for localStorage) ── */
+const idb={open(){return new Promise((res,rej)=>{if(!window.indexedDB)return rej(new Error("no IndexedDB"));const r=indexedDB.open("liftplanner",1);r.onupgradeneeded=()=>r.result.createObjectStore("attach");r.onsuccess=()=>res(r.result);r.onerror=()=>rej(r.error)})},
+  async tx(mode,fn){const db=await idb.open();return new Promise((res,rej)=>{const t=db.transaction("attach",mode),rq=fn(t.objectStore("attach"));t.oncomplete=()=>{db.close();res(rq&&"result" in rq?rq.result:rq)};t.onerror=()=>{db.close();rej(t.error)}})}};
+async function loadAttachments(){try{const keys=await idb.tx("readonly",st=>st.getAllKeys()),vals=await idb.tx("readonly",st=>st.getAll());keys.forEach((k,i)=>{if(Array.isArray(vals[i]))S.attach[k]=vals[i]})}catch(e){}}
+function saveAttach(id){const v=S.attach[id];return idb.tx("readwrite",st=>v&&v.length?st.put(v,id):st.delete(id)).catch(()=>toast("The pages could not be stored on this device"))}
+async function addChartFiles(files,id){const list=S.attach[id]||(S.attach[id]=[]);let n=0;
+  for(const f of files){const st=$("#fileStatus");if(st)st.textContent=`Reading ${f.name}…`;
+    try{if(f.type==="application/pdf"||/\.pdf$/i.test(f.name))n+=await addPdfPages(f,list);
+      else if(f.type.startsWith("image/")){list.push({id:uid(),name:f.name,dataUrl:await shrinkImage(f)});n++}
+      else toast(`${f.name}: not a PDF or an image`)}
+    catch(err){toast(`${f.name}: ${err.message||"could not be read"}`)}}
+  await saveAttach(id);render();if(n)toast(`${n} page${n===1?"":"s"} added`)}
+async function loadPdfjs(){if(!S.pdfjs){S.pdfjs=await import("./vendor/pdfjs/pdf.min.mjs");S.pdfjs.GlobalWorkerOptions.workerSrc="vendor/pdfjs/pdf.worker.min.mjs"}return S.pdfjs}
+/* Each PDF page becomes an image (so it prints and needs no viewer); the positioned text of the best
+   page is rebuilt into rows so a digital chart can prefill the table for checking. */
+async function addPdfPages(f,list){const pdfjs=await loadPdfjs();const doc=await pdfjs.getDocument({data:await f.arrayBuffer()}).promise;const n=Math.min(doc.numPages,8);let best="";
+  for(let i=1;i<=n;i++){const pg=await doc.getPage(i);const v0=pg.getViewport({scale:1});const vp=pg.getViewport({scale:Math.min(2.5,1600/v0.width)});
+    const cv=document.createElement("canvas");cv.width=Math.round(vp.width);cv.height=Math.round(vp.height);await pg.render({canvasContext:cv.getContext("2d"),viewport:vp}).promise;
+    list.push({id:uid(),name:`${f.name} – page ${i}`,dataUrl:cv.toDataURL("image/jpeg",.82)});
+    const txt=textToGrid((await pg.getTextContent()).items);if(txt.split("\n").length>best.split("\n").length)best=txt}
+  if(doc.numPages>n)toast(`Only the first ${n} pages of ${f.name} were kept`);
+  if(best.split("\n").length>=3)S.extracted={name:f.name,text:best};return n}
+function textToGrid(items){const rows=new Map();items.forEach(it=>{const t=(it.str||"").trim();if(!t)return;const y=Math.round(it.transform[5]/3)*3;if(!rows.has(y))rows.set(y,[]);rows.get(y).push({x:it.transform[4],t})});
+  const clean=t=>{const m=t.replace(/,/g,".").match(/^(-?\d+(?:\.\d+)?)\s*(m|t|ft|kg|°)?$/i);return m?m[1]:t};
+  return [...rows.entries()].sort((a,b)=>b[0]-a[0]).map(([,cells])=>cells.sort((a,b)=>a.x-b.x).map(c=>clean(c.t)))
+    .filter(cells=>cells.filter(t=>/^-?\d+(\.\d+)?$/.test(t)||t==="-"||t==="–").length>=2).map(cells=>cells.join("\t")).join("\n")}
+function shrinkImage(f){return new Promise((res,rej)=>{const url=URL.createObjectURL(f),im=new Image();
+  im.onload=()=>{const k=Math.min(1,1800/Math.max(im.width,im.height)),cv=document.createElement("canvas");cv.width=Math.max(1,Math.round(im.width*k));cv.height=Math.max(1,Math.round(im.height*k));cv.getContext("2d").drawImage(im,0,0,cv.width,cv.height);URL.revokeObjectURL(url);res(cv.toDataURL("image/jpeg",.85))};
+  im.onerror=()=>{URL.revokeObjectURL(url);rej(new Error("the image could not be read"))};im.src=url})}
+function gridFromText(txt){txt=txt.replace(/^﻿/,"");if(!/\t/.test(txt)&&/[,;]/.test(txt))txt=txt.replace(/[,;]/g,"\t");return txt.trim()}
+function appendixHTML(c){const att=c&&S.attach[c.id]||[];if(!att.length)return "";
+  return `<div class="appendix"><h2>Appendix · Load chart source</h2><p class="small" style="color:#5a6270">${esc(craneName(c))} · ${esc(c.name)}${c.source?" · "+esc(c.source):""}. Pages as uploaded by the planner – the manufacturer's rating book and the crane's LMI govern.</p>${att.map(a=>`<figure class="attach"><img class="attach" src="${a.dataUrl}" alt="${esc(a.name)}"><figcaption>${esc(a.name)}</figcaption></figure>`).join("")}</div>`}
 
 /* ── rendering ── */
 function field(k,label,type,attrs,v){const p=plan();const val=v!==undefined?v:(p[k]==null?"":p[k]);
@@ -397,16 +458,14 @@ function tabLift(){const p=plan();
     <p class="small muted" style="margin-top:8px">Everything is stored on this device only. Export before changing phones, and import on the laptop to print from there.</p>
   </div>`}
 
-function tabCrane(){const p=plan(),c=chartOf(p.chartId),m=modelOf(p.model),R=calc(p);
-  const charts=S.charts.filter(x=>x.model===p.model||p.model==="other"||x.model==="other");
+function tabCrane(){const p=plan(),c=chartOf(p.chartId),R=calc(p),sg=suggestionFor(c),att=c?(S.attach[c.id]||[]):[];
   $("#body").innerHTML=`<div class="card"><div class="kicker">02</div><h3>Crane</h3><div class="grid">
-    <label class="f">Sennebogen model<select data-k="model">${MODELS.map(x=>`<option value="${x.id}" ${x.id===p.model?"selected":""}>${esc(x.name)}${x.cap?" · "+x.cap+" t":""}</option>`).join("")}</select></label>
-    <label class="f wide">Load chart (configuration)<select data-k="chartId"><option value="">– choose –</option>${charts.map(x=>`<option value="${x.id}" ${x.id===p.chartId?"selected":""}>${esc(x.name)}</option>`).join("")}</select></label>
+    <label class="f wide">Crane and load chart (configuration)<select data-k="chartId"><option value="">– choose –</option>${S.charts.map(x=>`<option value="${x.id}" ${x.id===p.chartId?"selected":""}>${esc(craneName(x))} · ${esc(x.cfg||x.name)}</option>`).join("")}</select></label>
     ${c?`<label class="f">Boom length (m)<select data-k="boom">${c.booms.map((b,i)=>`<option value="${b}" ${i===R.bi?"selected":""}>${fmt(b)} m</option>`).join("")}</select></label>`:""}
     ${field("pickR","Pick radius (m)","number",'step="0.1" min="0"')}${field("setR","Set radius (m)","number",'step="0.1" min="0"')}${field("slewDeg","Slew between pick and set (°)","number",'step="5" min="0" max="360"')}
   </div>
-  ${m.note?`<p class="small muted" style="margin-top:10px"><b>${esc(m.name)}</b>: ${esc(m.note)}. Headline figures from public sources for orientation only – the rating book for the machine governs.</p>`:""}
-  ${c?`<p class="small" style="margin-top:8px">Chart: <b>${esc(c.cfg||c.name)}</b>${c.cwt?` · counterweight ${fmt(c.cwt)} t`:""} · capacities ${c.includesHook?"include":"exclude"} the hook block${c.source?` · source: ${esc(c.source)}`:""}</p>`:""}
+  ${c?`<p class="small" style="margin-top:10px"><b>${esc(craneName(c))}</b> · ${craneType(c)}${c.cfg?` · ${esc(c.cfg)}`:""}${c.cwt?` · counterweight ${fmt(c.cwt)} t`:""} · capacities ${c.includesHook?"include":"exclude"} the hook block${c.source?` · source: ${esc(c.source)}`:""}</p>`:`<p class="small muted" style="margin-top:10px">No chart chosen – add the crane and its load chart below. Any make and model can be entered.</p>`}
+  ${sg&&sg.note?`<p class="small muted"><b>${esc(sg.make)} ${esc(sg.model)}</b>: ${esc(sg.note)}. Headline figure from public sources for orientation only – the rating book for the machine governs.</p>`:""}
   ${c&&c.demo?`<div class="notice warn">This is the fictitious DEMO chart. Add the chart from the rating book for the machine and configuration on site before relying on anything here.</div>`:""}
   </div>
   ${c?`<div class="card"><div class="kicker">Rating at the working radius</div><h3>${esc(c.name)}</h3>
@@ -415,25 +474,38 @@ function tabCrane(){const p=plan(),c=chartOf(p.chartId),m=modelOf(p.model),R=cal
     <div class="kpi ${R.pct>100?"bad":"good"}"><div class="kicker">Governing</div><div class="v">${R.cap?fmt(R.cap,2)+" t":"–"}</div></div></div>
     <div class="tablewrap"><table><thead><tr><th>Radius</th>${c.booms.map((b,i)=>`<th class="n ${i===R.bi?"pick":""}">${fmt(b)} m</th>`).join("")}</tr></thead><tbody>
     ${c.radii.map((r,i)=>`<tr class="${(R.pick.ri===i||R.set.ri===i)&&R.cap!=null?"hit":""}"><td><b>${fmt(r)} m</b></td>${c.cap[i].map((v,j)=>`<td class="n ${j===R.bi?"pick":""}">${v==null?'<span class="muted">–</span>':fmt(v,v<10?2:1)}</td>`).join("")}</tr>`).join("")}</tbody></table></div>
+    ${att.length?`<div class="kicker" style="margin-top:12px">Rating book pages · tap to enlarge</div><div class="pages">${att.map((a,i)=>`<figure class="page"><img src="${a.dataUrl}" alt="${esc(a.name)}" data-zoom="${i}" loading="lazy"><figcaption>${esc(a.name)}</figcaption></figure>`).join("")}</div>`:""}
     <div class="row"><button class="btn small" data-editchart="${esc(c.id)}">Edit this chart</button><button class="btn small" data-dupchart="${esc(c.id)}">Copy as a new chart</button>${c.demo?"":`<button class="btn small warn" data-delchart="${esc(c.id)}">Delete</button>`}</div></div>`:""}
-  <div class="card" id="chartEditor"><div class="kicker">Rating book</div><h3>${S.editChart?"Edit chart":"Add a chart from the rating book"}</h3>
-    <p class="small muted">One chart per configuration (boom system, counterweight, track width, slew range) – the LMI on the crane uses the same split. Paste the table: first row the boom lengths, then one row per radius with the rated load in tonnes for each boom length and “-” where the book shows none. Tabs, commas or spaces all work.</p>
+  <div class="card" id="chartEditor"><div class="kicker">Rating book</div><h3>${S.editChart?"Edit chart":"Add a crane and its load chart"}</h3>
+    <p class="small muted">One chart per crane configuration (boom system, counterweight, track or outrigger setting, slew range) – the LMI on the crane uses the same split. Upload the chart page from the operator's manual or the commercial load chart, then enter the table: first row the boom lengths, then one row per radius with the rated load in tonnes for each boom length and “-” where the book shows none. Tabs, commas or spaces all work.</p>
     ${S.editChart?"":'<button class="btn small" id="openEditor">Add a chart</button>'}
     ${S.editChart?chartForm(S.editChart):""}
   </div>`}
 function chartForm(c){const f=(k,l,t,a)=>`<label class="f">${l}<input data-c="${k}" type="${t||"text"}" ${t==="number"?'inputmode="decimal"':""} ${a||""} value="${esc(c[k]==null?"":c[k])}"></label>`;
-  return `<div class="grid" style="margin-top:12px">
-    <label class="f wide">Chart name<input data-c="name" value="${esc(c.name||"")}" placeholder="e.g. 683 E – 42 m main boom, 360°, tracks 4.2 m, 24 t cwt"></label>
-    <label class="f">Model<select data-c="model">${MODELS.map(x=>`<option value="${x.id}" ${x.id===c.model?"selected":""}>${esc(x.name)}</option>`).join("")}</select></label>
+  const att=S.attach[c.id]||[],outr=c.type==="outrigger";
+  return `<datalist id="makes">${[...new Set(SUGGEST.map(x=>x.make))].map(m=>`<option value="${esc(m)}">`).join("")}</datalist><datalist id="models">${SUGGEST.map(x=>`<option value="${esc(x.model)}">${esc(x.make)}</option>`).join("")}</datalist>
+  <div class="grid" style="margin-top:12px">
+    <label class="f">Make<input data-c="make" list="makes" value="${esc(c.make||"")}" placeholder="e.g. Liebherr"></label>
+    <label class="f">Model<input data-c="model" list="models" value="${esc(c.model||"")}" placeholder="e.g. LTM 1100-5.2"></label>
+    <label class="f">Crane type<select data-c="type"><option value="crawler" ${outr?"":"selected"}>Crawler (tracks)</option><option value="outrigger" ${outr?"selected":""}>Mobile on outriggers</option></select></label>
+    <label class="f wide">Chart name<input data-c="name" value="${esc(c.name||"")}" placeholder="e.g. 42 m main boom, 360°, tracks 4.2 m, 24 t cwt"></label>
     ${f("cfg","Configuration (as printed in the book)")}${f("cwt","Counterweight (t)","number",'step="0.1"')}
-    <label class="f">Capacities include the hook block?<select data-c="includesHook"><option value="0" ${c.includesHook?"":"selected"}>No – deduct hook (Sennebogen books usually)</option><option value="1" ${c.includesHook?"selected":""}>Yes</option></select></label>
+    <label class="f">Capacities include the hook block?<select data-c="includesHook"><option value="0" ${c.includesHook?"":"selected"}>No – deduct the hook (usual)</option><option value="1" ${c.includesHook?"selected":""}>Yes</option></select></label>
     ${f("hookMass","Hook block mass (t)","number",'step="0.01"')}${f("hookLen","Hook block + headroom (m)","number",'step="0.1"')}
     ${f("pivotH","Boom pivot height above ground (m)","number",'step="0.1"')}${f("pivotX","Pivot offset behind slew centre (m)","number",'step="0.1"')}
-    ${f("opWeight","Operating weight incl. cwt (t)","number",'step="0.1"')}${f("trackLen","Track contact length (m)","number",'step="0.1"')}${f("shoeW","Track shoe width (m)","number",'step="0.01"')}${f("maxWind","Max wind in the book (m/s)","number",'step="0.1"')}
+    ${f("opWeight","Operating weight incl. cwt (t)","number",'step="0.1"')}${f("maxWind","Max wind in the book (m/s)","number",'step="0.1"')}
+    ${outr?f("outBase","Outrigger base, front to rear (m)","number",'step="0.1"')+f("outWidth","Outrigger spread, side to side (m)","number",'step="0.1"')+f("padL","Outrigger pad length (m)","number",'step="0.05"')+f("padW","Outrigger pad width (m)","number",'step="0.05"'):f("trackLen","Track contact length (m)","number",'step="0.1"')+f("shoeW","Track shoe width (m)","number",'step="0.01"')}
     ${f("source","Source (book, page, revision)")}
+    <div class="wide"><div class="kicker">Rating book pages</div>
+      <p class="small muted" style="margin:4px 0 8px">Upload the load chart page from the operator's manual or the commercial chart as a PDF or a photo. The pages stay with this chart on this device and print as an appendix to the plan. From a digital PDF the table text is read out so it can be inserted below and checked against the page.</p>
+      ${att.length?`<div class="pages">${att.map((a,i)=>`<figure class="page"><img src="${a.dataUrl}" alt="${esc(a.name)}" data-zoom="${i}"><button class="del" data-attdel="${esc(a.id)}" aria-label="Remove page">✕</button><figcaption>${esc(a.name)}</figcaption></figure>`).join("")}</div>`:""}
+      <div class="row"><label class="btn small" for="chartFiles">Add pages (PDF or image)</label><input type="file" id="chartFiles" accept="application/pdf,image/*" multiple class="hidden">
+      <label class="btn small" for="gridFile">Import table (CSV / TSV)</label><input type="file" id="gridFile" accept=".csv,.tsv,.txt,text/csv,text/tab-separated-values,text/plain" class="hidden">
+      ${S.extracted?`<button class="btn small primary" id="useExtracted">Insert the text read from ${esc(S.extracted.name)}</button>`:""}<span class="small muted" id="fileStatus"></span></div>
+    </div>
     <label class="f wide">Rating table<textarea data-c="grid" rows="10">${esc(c.grid!=null?c.grid:(c.booms?gridText(c):"Radius\t24\t30\t36\t42\n6\t\n8\t\n10\t"))}</textarea></label></div>
-    <div class="row" style="margin-top:12px"><button class="btn primary bp" id="saveChart">${BP}Save chart</button><button class="btn" id="cancelChart">Cancel</button></div>
-    <p class="small muted" style="margin-top:8px">Geometry fields are optional but needed for the hook-height and clearance checks. Pivot offset is positive when the boom foot sits behind the centre of rotation.</p>`}
+    <div class="row" style="margin-top:12px"><button class="btn primary" id="saveChart">Save chart</button><button class="btn" id="cancelChart">Cancel</button></div>
+    <p class="small muted" style="margin-top:8px">Geometry fields are optional but needed for the hook-height, clearance and ground checks. Pivot offset is positive when the boom foot sits behind the centre of rotation.${outr?` Ground pressure assumes ${PAD_SHARE*100} % of crane plus load on one pad.`:""}</p>`}
 
 function tabLoad(){const p=plan(),R=calc(p);
   $("#body").innerHTML=`<div class="card"><div class="kicker">03</div><h3>Load</h3><div class="grid">
@@ -469,24 +541,31 @@ function tabCheck(){const p=plan(),R=calc(p),c=R.chart,g=R.geom,gr=R.ground;
     <p class="small muted">Needed = set-down level + load height + rigging height + clearance. Available = tip height − hook block and headroom. Boom clearance ignores the boom's depth – keep the minimum generous.</p></div>
   <div class="card"><div class="kicker">Ground</div><h3>Bearing pressure</h3><div class="grid">
     ${field("bearing","Allowable bearing pressure (kPa)","number",'step="10"')}${field("opWeightOvr","Operating weight override (t)","number",'step="0.1" placeholder="'+(c?fmt(num(c.opWeight)):"")+'"')}
-    <label class="chk" style="border:0;align-self:end"><input type="checkbox" data-k="mats" ${p.mats?"checked":""}>Crane mats under the tracks</label>
-    ${p.mats?field("matL","Mat length (m)","number",'step="0.1"')+field("matW","Mat width (m)","number",'step="0.1"')+field("matN","Number of mats (total)","number",'step="1" min="1"'):""}</div>
-    ${gr?`<div class="kpis" style="margin-top:12px"><div class="kpi"><div class="kicker">Crane + load</div><div class="v">${fmt(gr.total,1)} <small>t</small></div></div>${gr.avg!=null?`<div class="kpi"><div class="kicker">Average on tracks</div><div class="v">${fmt(gr.avg,0)} <small>kPa</small></div></div>`:""}${gr.matAvg!=null?`<div class="kpi"><div class="kicker">Average on mats</div><div class="v">${fmt(gr.matAvg,0)} <small>kPa</small></div></div>`:""}${gr.design!=null?`<div class="kpi ${gr.ok===false?"bad":gr.ok?"good":""}"><div class="kicker">Design · one track loaded</div><div class="v">${fmt(gr.design,0)} <small>kPa</small></div></div>`:""}</div>`:`<p class="small muted" style="margin-top:10px">Enter the operating weight (on the chart or as an override) to estimate ground pressure.</p>`}
-    <p class="small muted">A simple estimate: crane plus gross load spread over the track (or mat) contact area, doubled because slewing over the side puts most of the weight on one track. Use Sennebogen's ground pressure tables for the machine where the margin is tight, and the geotech's allowable pressure for the set-up position.</p></div>
+    <label class="chk" style="border:0;align-self:end"><input type="checkbox" data-k="mats" ${p.mats?"checked":""}>${c&&c.type==="outrigger"?"Mats under the outrigger pads":"Crane mats under the tracks"}</label>
+    ${p.mats?field("matL","Mat length (m)","number",'step="0.1"')+field("matW","Mat width (m)","number",'step="0.1"')+(c&&c.type==="outrigger"?"":field("matN","Number of mats (total)","number",'step="1" min="1"')):""}</div>
+    ${gr?`<div class="kpis" style="margin-top:12px"><div class="kpi"><div class="kicker">Crane + load</div><div class="v">${fmt(gr.total,1)} <small>t</small></div></div>${gr.padLoad!=null?`<div class="kpi"><div class="kicker">On one pad (${PAD_SHARE*100} %)</div><div class="v">${fmt(gr.padLoad,1)} <small>t</small></div></div>`:""}${gr.avg!=null?`<div class="kpi"><div class="kicker">Average on tracks</div><div class="v">${fmt(gr.avg,0)} <small>kPa</small></div></div>`:""}${gr.padAvg!=null?`<div class="kpi"><div class="kicker">On the pad</div><div class="v">${fmt(gr.padAvg,0)} <small>kPa</small></div></div>`:""}${gr.matAvg!=null?`<div class="kpi"><div class="kicker">On mats</div><div class="v">${fmt(gr.matAvg,0)} <small>kPa</small></div></div>`:""}${gr.design!=null?`<div class="kpi ${gr.ok===false?"bad":gr.ok?"good":""}"><div class="kicker">Design · ${esc(gr.label)}</div><div class="v">${fmt(gr.design,0)} <small>kPa</small></div></div>`:""}</div>`:`<p class="small muted" style="margin-top:10px">Enter the operating weight (on the chart or as an override) to estimate ground pressure.</p>`}
+    <p class="small muted">${c&&c.type==="outrigger"?`A simple estimate: ${PAD_SHARE*100} % of crane plus gross load taken on one outrigger pad, spread over the pad (or the mat under it). Use the manufacturer's outrigger load tables where the margin is tight, and the geotech's allowable pressure for the set-up position.`:`A simple estimate: crane plus gross load spread over the track (or mat) contact area, doubled because slewing over the side puts most of the weight on one track. Use the manufacturer's ground pressure tables where the margin is tight, and the geotech's allowable pressure for the set-up position.`}</p></div>
   <div class="card"><div class="kicker">Pre-lift checks</div><h3>Controls</h3>
     ${CHECKS.map(([k,l])=>`<label class="chk"><input type="checkbox" data-check="${k}" ${p.checks&&p.checks[k]?"checked":""}>${esc(l)}</label>`).join("")}
     <label class="f" style="margin-top:12px">Notes<textarea data-k="notes" style="font-family:var(--sans)">${esc(p.notes)}</textarea></label></div>`}
 
 /* ── sketches (SVG) ── */
+function craneBasePlan(c,cx,cy,k){
+  if(c&&c.type==="outrigger"){const b=(num(c.outBase)||7)*k,w=(num(c.outWidth)||7)*k,pad=Math.max(4,(num(c.padL)||0.6)*k),car=2.6*k;
+    return `<rect x="${cx-b/2}" y="${cy-car/2}" width="${b}" height="${car}" fill="#6b7f99" opacity=".5"/>${[[-1,-1],[1,-1],[-1,1],[1,1]].map(([i,j])=>`<line x1="${cx+i*b/2}" y1="${cy}" x2="${cx+i*b/2}" y2="${cy+j*w/2}" stroke="#0b1f3a" stroke-width="2"/><rect x="${cx+i*b/2-pad/2}" y="${cy+j*w/2-pad/2}" width="${pad}" height="${pad}" fill="#0b1f3a"/>`).join("")}<rect x="${cx-car*0.9}" y="${cy-car*0.45}" width="${car*1.8}" height="${car*0.9}" fill="#0b1f3a" opacity=".85"/>`}
+  const tl=(c&&c.trackLen||7)*k,tw=(c&&c.shoeW||0.9)*k,gauge=3.6*k;
+  return `<rect x="${cx-gauge/2-tw/2}" y="${cy-tl/2}" width="${tw}" height="${tl}" fill="#6b7f99" opacity=".5"/><rect x="${cx+gauge/2-tw/2}" y="${cy-tl/2}" width="${tw}" height="${tl}" fill="#6b7f99" opacity=".5"/><rect x="${cx-gauge/2}" y="${cy-tl*0.28}" width="${gauge}" height="${tl*0.56}" fill="#0b1f3a" opacity=".85"/>`}
+function craneBaseElev(c,X,Y,k){
+  if(c&&c.type==="outrigger"){const b=num(c.outBase)||7,pad=num(c.padL)||0.6;
+    return `<rect x="${X(-b/2-0.6)}" y="${Y(1.5)}" width="${(b+1.2)*k}" height="${1.0*k}" fill="#6b7f99" opacity=".6"/>${[-1,1].map(i=>`<rect x="${X(i*b/2-0.12)}" y="${Y(1.2)}" width="${0.24*k}" height="${1.05*k}" fill="#0b1f3a"/><rect x="${X(i*b/2-pad/2)}" y="${Y(0.15)}" width="${pad*k}" height="${0.15*k}" fill="#0b1f3a"/>`).join("")}`}
+  const tl=c&&c.trackLen||7;return `<rect x="${X(-tl/2)}" y="${Y(1.1)}" width="${tl*k}" height="${1.1*k}" fill="#6b7f99" opacity=".6"/>`}
 function sketchPlan(p,R){const W=360,H=300,cx=W/2,cy=H/2,c=R.chart;const maxR=Math.max(num(p.pickR),num(p.setR),6)*1.25;const k=(Math.min(W,H)/2-14)/maxR;
-  const tl=(c&&c.trackLen||7)*k,tw=(c&&c.shoeW||0.9)*k,gauge=(3.6)*k;
   const pos=(r,deg)=>{const a=(deg-90)*Math.PI/180;return [cx+r*k*Math.cos(a),cy+r*k*Math.sin(a)]};
   const [px,py]=pos(num(p.pickR),0),[sx,sy]=pos(num(p.setR),num(p.slewDeg));const lw=Math.max(num(p.loadL),1)*k,lh=Math.max(num(p.loadW),1)*k;
   const rings=[2,4,6,8,10,12,14,16,18,20,24,28,32,36,40,48,56,64].filter(r=>r<=maxR);
   return `<svg class="sketch" viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg" font-family="IBM Plex Sans,Arial,sans-serif" font-size="10">
     ${rings.map(r=>`<circle cx="${cx}" cy="${cy}" r="${r*k}" fill="none" stroke="#9aa3ae" stroke-width=".5" stroke-dasharray="3 3"/><text x="${cx+3}" y="${cy+r*k-2}" fill="#7c8696">${r}</text>`).join("")}
-    <rect x="${cx-gauge/2-tw/2}" y="${cy-tl/2}" width="${tw}" height="${tl}" fill="#6b7f99" opacity=".5"/><rect x="${cx+gauge/2-tw/2}" y="${cy-tl/2}" width="${tw}" height="${tl}" fill="#6b7f99" opacity=".5"/>
-    <rect x="${cx-gauge/2}" y="${cy-tl*0.28}" width="${gauge}" height="${tl*0.56}" fill="#0b1f3a" opacity=".85"/>
+    ${craneBasePlan(c,cx,cy,k)}
     <path d="M${cx},${cy} L${px},${py}" stroke="#0b1f3a" stroke-width="3"/><path d="M${cx},${cy} L${sx},${sy}" stroke="#0b1f3a" stroke-width="3" stroke-dasharray="6 4"/>
     <path d="M${pos(Math.min(num(p.pickR),num(p.setR))*0.5,0).join(",")} A${Math.min(num(p.pickR),num(p.setR))*0.5*k},${Math.min(num(p.pickR),num(p.setR))*0.5*k} 0 ${num(p.slewDeg)>180?1:0} 1 ${pos(Math.min(num(p.pickR),num(p.setR))*0.5,num(p.slewDeg)).join(",")}" fill="none" stroke="#b3261e" stroke-width="1"/>
     <rect x="${px-lw/2}" y="${py-lh/2}" width="${lw}" height="${lh}" fill="#dfe7f0" stroke="#0b1f3a"/><text x="${px}" y="${py-lh/2-4}" text-anchor="middle" fill="#15181c" font-weight="600">PICK ${fmt(num(p.pickR))} m</text>
@@ -500,7 +579,7 @@ function sketchElev(p,R){const W=360,H=300,c=R.chart,g=R.geom;const Rg=R.govR;co
   const od=num(p.obstD),oh=num(p.obstH);
   return `<svg class="sketch" viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg" font-family="IBM Plex Sans,Arial,sans-serif" font-size="10">
     <line x1="0" y1="${gy}" x2="${W}" y2="${gy}" stroke="#15181c"/>
-    <rect x="${X(-(c&&c.trackLen||7)/2)}" y="${Y(1.1)}" width="${(c&&c.trackLen||7)*k}" height="${1.1*k}" fill="#6b7f99" opacity=".6"/><rect x="${X(-2.2)}" y="${Y(pivH+0.6)}" width="${4.6*k}" height="${(pivH-0.5)*k}" fill="#0b1f3a" opacity=".85"/>
+    ${craneBaseElev(c,X,Y,k)}<rect x="${X(-2.2)}" y="${Y(pivH+0.6)}" width="${4.6*k}" height="${(pivH-0.5)*k}" fill="#0b1f3a" opacity=".85"/>
     <line x1="${X(-pivX)}" y1="${Y(pivH)}" x2="${X(tx)}" y2="${Y(ty)}" stroke="#0b1f3a" stroke-width="5" stroke-linecap="round"/>
     ${ok?`<line x1="${X(Rg)}" y1="${Y(ty)}" x2="${X(Rg)}" y2="${Y(hookY)}" stroke="#15181c" stroke-width="1"/><rect x="${X(Rg-loadL/2)}" y="${Y(loadTop)}" width="${loadL*k}" height="${loadH*k}" fill="#dfe7f0" stroke="#0b1f3a"/>
       ${num(p.setLevel)>0?`<rect x="${X(Rg-loadL/2-1)}" y="${Y(num(p.setLevel))}" width="${(loadL+2)*k}" height="${num(p.setLevel)*k}" fill="#cfd5dd" stroke="#7c8696"/>`:""}`:`<text x="${X(tx)}" y="${Y(ty)-6}" fill="#b3261e" font-weight="600">boom too short</text>`}
@@ -510,12 +589,12 @@ function sketchElev(p,R){const W=360,H=300,c=R.chart,g=R.geom;const Rg=R.govR;co
     <text x="6" y="12" fill="#7c8696">Elevation · governing radius</text></svg>`}
 
 /* ── printed plan ── */
-function sheetHTML(p){const R=calc(p),c=R.chart,m=R.model,g=R.geom,gr=R.ground,st=S.settings;
+function sheetHTML(p){const R=calc(p),c=R.chart,g=R.geom,gr=R.ground,st=S.settings;
   const dl=rows=>`<dl>${rows.filter(r=>r).map(([k,v])=>`<dt>${esc(k)}</dt><dd>${v==null||v===""?"–":v}</dd>`).join("")}</dl>`;
   const verdict=R.fails.length?["NOT PERMITTED AS PLANNED","crit"]:R.critical?["CRITICAL LIFT","crit"]:["STANDARD LIFT","ok"];
   return `<div class="sheet">
     <div class="head"><div><div class="kicker">${esc([st.company,st.project].filter(Boolean).join(" · "))}</div><h1>Lift plan ${esc(p.liftNo||"")}</h1><div>${esc(planName(p))}</div></div>
-      <div style="text-align:right"><div class="kicker">Date / time</div><div><b>${esc(p.date||"–")}</b> ${esc(p.time||"")}</div><div class="kicker" style="margin-top:6px">Crane</div><div><b>Sennebogen ${esc(m.name)}</b></div></div></div>
+      <div style="text-align:right"><div class="kicker">Date / time</div><div><b>${esc(p.date||"–")}</b> ${esc(p.time||"")}</div><div class="kicker" style="margin-top:6px">Crane</div><div><b>${esc(R.crane)}</b></div></div></div>
     ${c&&c.demo?`<div class="banner">DEMO CHART – the capacities below are fictitious. Replace with the rating book for the machine before use.</div>`:""}
     <div class="verdict ${verdict[1]}"><span class="big">${verdict[0]}</span><span>Gross load <b>${fmt(R.gross,2)} t</b> · rated <b>${R.cap?fmt(R.cap,2)+" t":"–"}</b> at ${fmt(R.gov.chartR||R.govR)} m · utilisation <b>${R.pct!=null?fmt(R.pct,0)+"%":"–"}</b></span>${R.critical?`<span class="small">${esc(R.reasons.join("; "))}</span>`:""}</div>
     ${R.fails.length?`<div class="box" style="border-color:#b3261e;color:#b3261e;margin-top:8px">${R.fails.map(f=>`<div>✕ ${esc(f)}</div>`).join("")}</div>`:""}
@@ -524,7 +603,7 @@ function sheetHTML(p){const R=calc(p),c=R.chart,m=R.model,g=R.geom,gr=R.ground,s
       ${dl([["Location",esc(p.location)],["Description",esc(p.description)],["Permit / notification",esc(p.permitNo)],["Weight source",esc({verified:"Verified",calculated:"Calculated from drawings",estimated:"Estimated"}[p.loadSource]||p.loadSource)]])}
       ${dl([["Lift supervisor",esc(p.liftSupervisor)],["Crane operator",esc(p.operator)],["Dogman / rigger",esc(p.dogman)],["Prepared by",esc(p.preparedBy)]])}</div>
     <h2>2 · Crane and configuration</h2><div class="cols">
-      ${dl([["Crane",`Sennebogen ${esc(m.name)}`],["Chart",c?esc(c.name):"–"],["Configuration",c?esc(c.cfg||"–"):"–"],["Counterweight",c&&c.cwt?fmt(c.cwt)+" t":"–"],["Boom length",R.boom?fmt(R.boom)+" m":"–"],["Chart source",c?esc(c.source||"–"):"–"]])}
+      ${dl([["Crane",esc(R.crane)],["Type",c?craneType(c):"–"],["Chart",c?esc(c.name):"–"],["Configuration",c?esc(c.cfg||"–"):"–"],["Counterweight",c&&c.cwt?fmt(c.cwt)+" t":"–"],["Boom length",R.boom?fmt(R.boom)+" m":"–"],["Chart source",c?esc(c.source||"–"):"–"]])}
       ${dl([["Pick radius",fmt(num(p.pickR))+" m"],["Set radius",fmt(num(p.setR))+" m"],["Slew",fmt(num(p.slewDeg),0)+"°"],g&&!g.unreach?["Boom angle",fmt(g.angle,0)+"°"]:null,R.maxWind?["Max wind (book)",fmt(R.maxWind)+" m/s"]:null,["Hook block",c?fmt(num(c.hookMass),2)+" t"+(c.includesHook?" (in chart)":" (added)"):"–"]])}</div>
     <h2>3 · Load and rigging</h2><div class="cols">
       <table><tbody><tr><td>Load${num(p.loadL)>0&&num(p.loadW)>0&&num(p.loadH)>0?` (${[p.loadL,p.loadW,p.loadH].map(v=>fmt(num(v))).join(" × ")} m)`:""}</td><td class="n">${fmt(num(p.loadMass),2)} t</td></tr><tr><td>Allowance ${fmt(num(p.allowPct),0)}%</td><td class="n">${fmt(R.allow,2)} t</td></tr>
@@ -538,7 +617,7 @@ function sheetHTML(p){const R=calc(p),c=R.chart,m=R.model,g=R.geom,gr=R.ground,s
     <div class="cols3">
       <div class="box"><b>Height</b>${g&&!g.unreach?dl([["Tip height",fmt(g.tipH)+" m"],["Hook available",fmt(g.hookAvail)+" m"],["Hook needed",fmt(g.hookReq)+" m"],["Result",g.hookOK?"OK":"<b class='warn'>SHORT</b>"]]):"<div class='small'>Not checked – no pivot geometry on the chart.</div>"}</div>
       <div class="box"><b>Boom clearance</b>${g&&g.obstClear!=null?dl([["Obstacle",`${fmt(num(p.obstH))} m high at ${fmt(num(p.obstD))} m`],["Boom height there",fmt(g.boomAtObst)+" m"],["Clearance",fmt(g.obstClear,2)+" m"],["Result",g.obstClear>=num(st.minClear)?"OK":"<b class='warn'>TOO CLOSE</b>"]]):"<div class='small'>No obstacle entered.</div>"}</div>
-      <div class="box"><b>Ground bearing</b>${gr?dl([["Crane + load",fmt(gr.total,1)+" t"],gr.avg!=null?["Average on tracks",fmt(gr.avg,0)+" kPa"]:null,gr.matAvg!=null?["Average on mats",fmt(gr.matAvg,0)+" kPa"]:null,gr.design!=null?["One track loaded",fmt(gr.design,0)+" kPa"]:null,["Allowable",gr.allow?fmt(gr.allow,0)+" kPa":"–"],["Result",gr.ok==null?"not checked":gr.ok?"OK":"<b class='warn'>EXCEEDS</b>"]]):"<div class='small'>No operating weight entered.</div>"}</div></div>
+      <div class="box"><b>Ground bearing</b>${gr?dl([["Crane + load",fmt(gr.total,1)+" t"],gr.padLoad!=null?[`On one pad (${PAD_SHARE*100} %)`,fmt(gr.padLoad,1)+" t"]:null,gr.avg!=null?["Average on tracks",fmt(gr.avg,0)+" kPa"]:null,gr.padAvg!=null?["On the pad",fmt(gr.padAvg,0)+" kPa"]:null,gr.matAvg!=null?["On mats",fmt(gr.matAvg,0)+" kPa"]:null,gr.design!=null?[gr.outrigger?"One pad, design":"One track loaded",fmt(gr.design,0)+" kPa"]:null,["Allowable",gr.allow?fmt(gr.allow,0)+" kPa":"–"],["Result",gr.ok==null?"not checked":gr.ok?"OK":"<b class='warn'>EXCEEDS</b>"]]):"<div class='small'>No operating weight entered.</div>"}</div></div>
     <div class="keep"><h2>5 · Sketch</h2><div class="cols">${sketchPlan(p,R)}${sketchElev(p,R)}</div></div>
     <div class="keep"><h2>6 · Hazards and controls</h2>
     ${R.flagHits.length?`<div class="box" style="margin-bottom:6px"><b>Critical lift factors:</b> ${esc(R.flagHits.join("; "))}</div>`:""}
@@ -547,14 +626,13 @@ function sheetHTML(p){const R=calc(p),c=R.chart,m=R.model,g=R.geom,gr=R.ground,s
     ${p.notes?`<p style="white-space:pre-wrap"><b>Notes:</b> ${esc(p.notes)}</p>`:""}</div>
     <div class="keep"><h2>7 · Sign-off</h2>
     <div class="sign"><div><b>Prepared by</b>${esc(p.preparedBy)}<br>Signature / date</div><div><b>Crane operator</b>${esc(p.operator)}<br>Signature / date</div><div><b>Dogman / rigger</b>${esc(p.dogman)}<br>Signature / date</div><div><b>Lift supervisor</b>${esc(p.liftSupervisor)}<br>Signature / date</div><div><b>${esc(st.company||"Contractor")} approval</b><br>Signature / date</div><div><b>Principal contractor review${R.critical?" (required – critical lift)":""}</b><br>Signature / date</div></div>
-    </div><div class="foot">Prepared with the lift planner on ${esc(new Date().toLocaleString("en-AU"))}. Lift to be re-planned if the load, crane configuration, radius, ground or weather differ from this sheet. All lifts to be carried out by licensed personnel in accordance with the rating book, the site's crane procedures and AS 2550.1 / AS 2550.5.</div>
+    </div><div class="foot">Prepared with the lift planner on ${esc(new Date().toLocaleString("en-AU"))}. Lift to be re-planned if the load, crane configuration, radius, ground or weather differ from this sheet. All lifts to be carried out by licensed personnel in accordance with the rating book, the site's crane procedures and AS 2550.1 / AS 2550.5.</div>${appendixHTML(c)}
   </div>`}
-function tabDoc(){const p=plan();$("#body").innerHTML="";$("#sheet").innerHTML=`<div class="doctools noprint"><button class="btn" id="backBtn">← Checks</button><button class="btn primary" id="printBtn">Print / save as PDF</button><span class="small muted">A4, two pages. In the print dialog choose “Save as PDF”.</span></div>${sheetHTML(p)}`}
+function tabDoc(){const p=plan();$("#body").innerHTML="";$("#sheet").innerHTML=`<div class="doctools noprint"><button class="btn" id="backBtn">← Checks</button><button class="btn primary" id="printBtn">Print / save as PDF</button><span class="small muted">A4 – two pages, plus the rating-book pages as an appendix. In the print dialog choose “Save as PDF”.</span></div>${sheetHTML(p)}`}
 
 /* ── events ── */
 document.addEventListener("input",e=>{const t=e.target,p=plan();
   if(t.dataset.k!==undefined){const k=t.dataset.k;p[k]=t.type==="checkbox"?t.checked:t.type==="number"?(t.value===""?"":num(t.value)):t.value;
-    if(k==="model"){const ch=S.charts.find(x=>x.model===p.model);p.chartId=ch?ch.id:"";p.boom=null;save();render();return}
     if(k==="chartId"){p.boom=null;save();render();return}
     save();if(t.type==="number"||t.type==="checkbox"||t.tagName==="SELECT"){rerenderKeepingFocus();return}
     if(k==="title"||k==="description")$("#planTitle").textContent=planName(p);renderStrip();return}
@@ -562,37 +640,43 @@ document.addEventListener("input",e=>{const t=e.target,p=plan();
   if(t.dataset.flag){p.flags=p.flags||{};p.flags[t.dataset.flag]=t.checked;save();renderStrip();return}
   if(t.dataset.check){p.checks=p.checks||{};p.checks[t.dataset.check]=t.checked;save();return}
   if(t.dataset.rig!==undefined){const r=p.rig[+t.dataset.rig];if(r){r[t.dataset.rk]=t.type==="number"?num(t.value):t.value;save();if(t.dataset.rk!=="name")rerenderKeepingFocus();else renderStrip()}return}
-  if(t.dataset.c!==undefined&&S.editChart){const k=t.dataset.c;S.editChart[k]=k==="includesHook"?t.value==="1":t.type==="number"?(t.value===""?"":num(t.value)):t.value;return}});
+  if(t.dataset.c!==undefined&&S.editChart){const k=t.dataset.c;S.editChart[k]=k==="includesHook"?t.value==="1":t.type==="number"?(t.value===""?"":num(t.value)):t.value;if(k==="type")render();return}});
 /* Re-render the tab (results change with every field) but keep the field being typed in as it was,
    so a half-typed decimal isn't flattened mid-keystroke and focus stays put. */
 function rerenderKeepingFocus(){const a=document.activeElement,key=x=>x.dataset.k||(x.dataset.rig!==undefined?"rig"+x.dataset.rig+x.dataset.rk:null),id=a&&key(a),raw=a&&a.value;render();
   if(id){const el=$$("input,select").find(x=>key(x)===id);if(el){if(el.type==="number"&&el.value!==raw)el.value=raw;el.focus()}}}
 document.addEventListener("change",e=>{if(e.target.id==="planSel"){S.planId=e.target.value;save();render()}
+  if(e.target.id==="chartFiles"&&S.editChart){const fs=[...e.target.files];e.target.value="";if(fs.length)addChartFiles(fs,S.editChart.id);return}
+  if(e.target.id==="gridFile"&&S.editChart){const f=e.target.files[0];e.target.value="";if(!f)return;f.text().then(t=>{S.editChart.grid=gridFromText(t);render();toast(`Table imported from ${f.name} – check it before saving`)});return}
   if(e.target.id==="importAll"){const f=e.target.files[0];if(!f)return;f.text().then(txt=>{const d=JSON.parse(txt);if(!d||(!Array.isArray(d.plans)&&!Array.isArray(d.charts)))throw new Error("bad");
-    (d.charts||[]).forEach(c=>{if(c&&c.id&&c.booms){const i=S.charts.findIndex(x=>x.id===c.id);if(i>=0)S.charts[i]=c;else S.charts.push(c)}});
+    (d.charts||[]).forEach(c=>{if(c&&c.id&&c.booms){if(!c.type)c.type="crawler";const i=S.charts.findIndex(x=>x.id===c.id);if(i>=0)S.charts[i]=c;else S.charts.push(c)}});
+    if(d.attachments)Object.entries(d.attachments).forEach(([k,v])=>{if(Array.isArray(v)&&v.length){S.attach[k]=v;saveAttach(k)}});
     (d.plans||[]).forEach(p=>{if(p&&p.id){const i=S.plans.findIndex(x=>x.id===p.id);if(i>=0)S.plans[i]=p;else S.plans.push(p)}});
     if(d.settings)S.settings={...S.settings,...d.settings};save();render();toast(`Imported ${(d.plans||[]).length} plans and ${(d.charts||[]).length} charts`)}).catch(()=>toast("That file isn't a lift planner export"));e.target.value=""}});
-document.addEventListener("click",e=>{const t=e.target.closest("button,[data-tab]");if(!t)return;const p=plan();
+document.addEventListener("click",e=>{const t=e.target.closest("button,[data-tab],[data-zoom]");if(!t)return;const p=plan();
+  if(t.dataset.zoom!==undefined){t.closest("figure").classList.toggle("zoom");return}
   if(t.dataset.tab){S.tab=t.dataset.tab;S.editChart=null;render();window.scrollTo(0,0);return}
   switch(t.id){
     case "newPlan":{const n=newPlan();S.plans.push(n);S.planId=n.id;S.tab="lift";save();render();return}
     case "dupPlan":{const n={...JSON.parse(JSON.stringify(p)),id:uid(),createdAt:Date.now(),title:(p.title||planName(p))+" (copy)",checks:{}};S.plans.push(n);S.planId=n.id;save();render();toast("Duplicated");return}
     case "delPlan":{if(!confirm(`Delete “${planName(p)}”?`))return;S.plans=S.plans.filter(x=>x.id!==p.id);S.planId=null;save();render();return}
-    case "openEditor":{S.editChart=S.editChart?null:{id:uid(),model:p.model,includesHook:false,hookMass:"",hookLen:2,grid:""};render();if(S.editChart)$("#chartEditor").scrollIntoView({behavior:"smooth"});return}
-    case "cancelChart":{S.editChart=null;render();return}
-    case "saveChart":{const c=S.editChart;try{const g=parseGrid(c.grid||"");const out={...c,...g};delete out.grid;if(!out.name)out.name=`${modelOf(out.model).name} – ${out.cfg||g.booms.join("/")+" m"}`;
-        ["cwt","hookMass","hookLen","pivotH","pivotX","opWeight","trackLen","shoeW","maxWind"].forEach(k=>out[k]=num(out[k]));out.demo=false;
-        const i=S.charts.findIndex(x=>x.id===out.id);if(i>=0)S.charts[i]=out;else S.charts.push(out);p.model=out.model;p.chartId=out.id;p.boom=null;S.editChart=null;save();render();toast("Chart saved")}catch(err){toast(err.message)}return}
+    case "openEditor":{S.editChart=S.editChart?null:{id:uid(),make:"",model:"",type:"crawler",includesHook:false,hookMass:"",hookLen:2,grid:""};S.extracted=null;render();if(S.editChart)$("#chartEditor").scrollIntoView({behavior:"smooth"});return}
+    case "cancelChart":{const c=S.editChart;S.editChart=null;S.extracted=null;if(c&&!chartOf(c.id)&&S.attach[c.id]){delete S.attach[c.id];saveAttach(c.id)}render();return}
+    case "useExtracted":{if(S.editChart&&S.extracted){S.editChart.grid=S.extracted.text;S.extracted=null;render();toast("Check every figure against the page before saving")}return}
+    case "saveChart":{const c=S.editChart;try{const g=parseGrid(c.grid||"");const out={...c,...g};delete out.grid;if(!out.name)out.name=out.cfg||g.booms.join(" / ")+" m boom";if(!out.type)out.type="crawler";
+        ["cwt","hookMass","hookLen","pivotH","pivotX","opWeight","trackLen","shoeW","maxWind","outBase","outWidth","padL","padW"].forEach(k=>out[k]=num(out[k]));out.demo=false;
+        const i=S.charts.findIndex(x=>x.id===out.id);if(i>=0)S.charts[i]=out;else S.charts.push(out);p.chartId=out.id;p.boom=null;S.editChart=null;S.extracted=null;save();render();toast("Chart saved")}catch(err){toast(err.message)}return}
     case "rigAdd":{p.rig=p.rig||[];p.rig.push({name:"",mass:0,wll:"",qty:1});save();render();return}
-    case "exportAll":{const blob=new Blob([JSON.stringify({plans:S.plans,charts:S.charts,settings:S.settings,exportedAt:new Date().toISOString()},null,1)],{type:"application/json"});const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download=`lift-planner-${today()}.json`;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),2000);return}
+    case "exportAll":{const blob=new Blob([JSON.stringify({plans:S.plans,charts:S.charts,attachments:S.attach,settings:S.settings,exportedAt:new Date().toISOString()},null,1)],{type:"application/json"});const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download=`lift-planner-${today()}.json`;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),2000);return}
     case "printBtn":{window.print();return}
     case "backBtn":{S.tab="check";render();return}}
   if(t.dataset.rigdel!==undefined){p.rig.splice(+t.dataset.rigdel,1);save();render();return}
   if(t.dataset.editchart){const c=chartOf(t.dataset.editchart);if(!c)return;S.editChart={...c,grid:gridText(c)};render();$("#chartEditor").scrollIntoView({behavior:"smooth"});return}
-  if(t.dataset.dupchart){const c=chartOf(t.dataset.dupchart);if(!c)return;S.editChart={...c,id:uid(),demo:false,name:c.demo?"":c.name+" (copy)",source:c.demo?"":c.source,grid:gridText(c)};render();$("#chartEditor").scrollIntoView({behavior:"smooth"});return}
-  if(t.dataset.delchart){if(!confirm("Delete this chart?"))return;S.charts=S.charts.filter(x=>x.id!==t.dataset.delchart);S.plans.forEach(x=>{if(x.chartId===t.dataset.delchart)x.chartId=""});save();render();return}});
+  if(t.dataset.attdel&&S.editChart){const id=S.editChart.id;S.attach[id]=(S.attach[id]||[]).filter(a=>a.id!==t.dataset.attdel);saveAttach(id);render();return}
+  if(t.dataset.dupchart){const c=chartOf(t.dataset.dupchart);if(!c)return;const nid=uid();if((S.attach[c.id]||[]).length){S.attach[nid]=S.attach[c.id].map(a=>({...a,id:uid()}));saveAttach(nid)}S.editChart={...c,id:nid,demo:false,name:c.demo?"":c.name+" (copy)",source:c.demo?"":c.source,grid:gridText(c)};render();$("#chartEditor").scrollIntoView({behavior:"smooth"});return}
+  if(t.dataset.delchart){if(!confirm("Delete this chart?"))return;S.charts=S.charts.filter(x=>x.id!==t.dataset.delchart);S.plans.forEach(x=>{if(x.chartId===t.dataset.delchart)x.chartId=""});delete S.attach[t.dataset.delchart];saveAttach(t.dataset.delchart);save();render();return}});
 window.addEventListener("beforeprint",()=>{if(S.tab!=="doc"){$("#sheet").innerHTML=sheetHTML(plan())}});
-render();
+render();loadAttachments().then(()=>{if(Object.keys(S.attach).length)render()});
 </script>
 </body>
 </html>
