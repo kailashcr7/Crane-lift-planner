@@ -1,0 +1,26 @@
+name: Lift planner test
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  e2e:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install test tooling
+        run: |
+          sudo apt-get update && sudo apt-get install -y poppler-utils
+          pip install playwright pypdf
+          python -m playwright install --with-deps chromium
+      - name: Run the headless end-to-end test
+        run: python tools/test/liftplan.py tools/test/out
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: screenshots-and-pdf
+          path: tools/test/out

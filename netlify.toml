@@ -1,0 +1,8 @@
+[build]
+  publish = "public"
+  command = ""
+
+[[headers]]
+  for = "/*.html"
+  [headers.values]
+    Cache-Control = "no-cache"

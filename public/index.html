@@ -1,0 +1,556 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#144170">
+<title>Lift planner – Sennebogen cranes</title>
+<style>
+@font-face{font-family:'Barlow';font-style:normal;font-weight:400;font-display:swap;src:url(fonts/Barlow-400.woff2) format('woff2')}
+@font-face{font-family:'Barlow';font-style:normal;font-weight:500;font-display:swap;src:url(fonts/Barlow-500.woff2) format('woff2')}
+@font-face{font-family:'Barlow';font-style:normal;font-weight:600 700;font-display:swap;src:url(fonts/Barlow-700.woff2) format('woff2')}
+@font-face{font-family:'Barlow Condensed';font-style:normal;font-weight:400;font-display:swap;src:url(fonts/BarlowCondensed-400.woff2) format('woff2')}
+@font-face{font-family:'Barlow Condensed';font-style:normal;font-weight:600;font-display:swap;src:url(fonts/BarlowCondensed-600.woff2) format('woff2')}
+/* ── Industry system tokens (same as index.html) ── */
+:root{
+  --bg:#f2f2f3;--surface:#e9e9ea;--ink:#1d1f20;--muted:#5d5d60;--muted-2:#7a7a7d;
+  --line:rgba(29,31,32,.16);--line-soft:rgba(29,31,32,.08);
+  --accent:#5980a6;--accent-600:#597ea3;--accent-700:#416180;--accent-800:#2c455d;--accent-900:#144170;
+  --accent-100:#eef6ff;--accent-200:#d6ebff;--accent-300:#b5d9fd;
+  --n200:#e7e7ea;--n300:#d4d4d7;--warn:#a8502a;--warn-soft:#f6e6de;--ok:#2f6f55;--ok-soft:#dfeee6;
+  --sans:"Barlow","Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  --cond:"Barlow Condensed","Barlow","Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);
+}
+@media (prefers-color-scheme:dark){:root{
+  --bg:#1d1f20;--surface:#2b2b2d;--ink:#f2f2f3;--muted:#b7b7ba;--muted-2:#98989b;
+  --line:rgba(242,242,243,.2);--line-soft:rgba(242,242,243,.1);
+  --accent:#94bce3;--accent-600:#b5d9fd;--accent-700:#b5d9fd;--accent-800:#d6ebff;--accent-900:#2c455d;
+  --accent-100:#2c455d;--accent-200:#2c455d;--accent-300:#416180;--n200:#424244;--n300:#5d5d60;
+  --warn:#e08a63;--warn-soft:#4a2a1c;--ok:#7fbf9f;--ok-soft:#1f3a2e}}
+*,*::before,*::after{box-sizing:inherit}
+html,body{margin:0}
+body{background:var(--bg);color:var(--ink);font:400 15px/1.5 var(--sans);-webkit-text-size-adjust:100%}
+button,input,select,textarea{font:inherit;color:inherit}
+:focus{outline:none}:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.wrap{max-width:900px;margin:0 auto;padding:0 18px 120px}
+h1,h2,h3,h4{font-family:var(--cond);font-weight:600;line-height:1.12;letter-spacing:-.015em;margin:0;color:var(--ink)}
+h1{font-size:34px}h2{font-size:26px}h3{font-size:21px}h4{font-size:17px}
+.kicker{font:500 11px/1.3 var(--sans);letter-spacing:.1em;text-transform:uppercase;color:var(--accent-700)}
+p{margin:.4em 0}.muted{color:var(--muted)}.small{font-size:13.5px}.warn{color:var(--warn)}.ok{color:var(--ok)}
+.row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}.sp{flex:1}
+.bp{position:relative;border:1px solid var(--line)}
+.bp>i.c{position:absolute;width:11px;height:11px;color:rgba(29,31,32,.55);pointer-events:none}
+@media (prefers-color-scheme:dark){.bp>i.c{color:rgba(242,242,243,.55)}}
+.bp>i.c::before,.bp>i.c::after{content:"";position:absolute;background:currentColor}
+.bp>i.c::before{left:5px;top:0;width:1px;height:100%}.bp>i.c::after{top:5px;left:0;width:100%;height:1px}
+.bp>i.c.tl{top:-6px;left:-6px}.bp>i.c.tr{top:-6px;right:-6px}.bp>i.c.bl{bottom:-6px;left:-6px}.bp>i.c.br{bottom:-6px;right:-6px}
+.btn.primary.bp>i.c{color:var(--accent-900)}
+header.top{position:sticky;top:0;z-index:20;background:var(--bg);border-bottom:1px solid var(--line)}
+header.top .bar{max-width:900px;margin:0 auto;display:flex;align-items:center;gap:12px;padding:8px 18px}
+.brand{font:600 17px/1.1 var(--cond);white-space:nowrap}
+.brand small{display:block;font:500 10.5px/1.2 var(--sans);letter-spacing:.08em;text-transform:uppercase;color:var(--accent-700);margin-top:2px}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;border:1px solid var(--line);background:transparent;padding:8px 14px;cursor:pointer;font:600 15px/1.2 var(--cond);min-height:44px;color:var(--ink);text-decoration:none}
+.btn:hover{background:var(--line-soft)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:#f2f2f3}
+.btn.good{background:var(--accent-900);border-color:var(--accent-900);color:#f2f2f3}
+.btn.warn{border-color:var(--warn);color:var(--warn)}
+.btn.small{min-height:36px;padding:6px 10px;font-size:14px}.btn.big{min-height:54px;font-size:17px;width:100%}
+.btn[disabled]{opacity:.45;cursor:not-allowed}
+.link{background:none;border:0;color:var(--accent-700);text-decoration:underline;text-underline-offset:3px;cursor:pointer;padding:6px 0;font-weight:500}
+.seg{display:inline-flex;border:1px solid var(--line);flex-wrap:wrap}
+.seg button{border:0;background:transparent;padding:8px 12px;cursor:pointer;font-weight:500;font-size:13.5px;min-height:40px;border-right:1px solid var(--line);color:var(--ink)}
+.seg button:last-child{border-right:0}.seg button[aria-pressed="true"]{background:var(--accent);color:#f2f2f3}
+.card{position:relative;border:1px solid var(--line);padding:14px 16px;margin:12px 0}
+.card h3{margin-bottom:8px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:12px}.grid .wide{grid-column:1/-1}
+label.f{display:flex;flex-direction:column;gap:5px;font-size:12px;color:var(--muted);font-weight:500;min-width:0}
+label.f input,label.f select,label.f textarea{border:1px solid var(--line);padding:9px 10px;background:var(--surface);color:var(--ink);font-size:16px;min-height:48px;width:100%}
+label.f input:focus-visible,label.f select:focus-visible,label.f textarea:focus-visible{border-color:var(--accent);outline-offset:0}
+label.f textarea{min-height:90px;resize:vertical;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:16px}
+label.chk{display:flex;gap:10px;align-items:flex-start;padding:8px 0;border-bottom:1px solid var(--line-soft);font-size:14.5px;cursor:pointer}
+label.chk input{width:22px;height:22px;margin:1px 0 0;accent-color:var(--accent-900);flex:none}
+.tablewrap{overflow-x:auto;border:1px solid var(--line);margin:8px 0 12px}
+table{border-collapse:collapse;width:100%;font-size:14px}
+th,td{padding:7px 9px;border-bottom:1px solid var(--line-soft);text-align:left;vertical-align:top}
+th{font:500 11px/1.3 var(--sans);letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+td.n,th.n{text-align:right;font-variant-numeric:tabular-nums}
+tr.hit td{background:var(--accent-200);font-weight:600}
+td.pick{outline:2px solid var(--accent-900);outline-offset:-2px}
+.pill{display:inline-block;font:600 11px/1 var(--sans);letter-spacing:.06em;text-transform:uppercase;padding:5px 8px;border:1px solid var(--line);color:var(--muted)}
+.pill.ok{border-color:var(--ok);color:var(--ok)}.pill.warn{border-color:var(--warn);color:var(--warn)}.pill.crit{background:var(--warn);border-color:var(--warn);color:#fff}
+.pill.navy{background:var(--accent-900);border-color:var(--accent-900);color:#f2f2f3}
+.notice{border:1px solid var(--line);padding:10px 14px;margin:10px 0;font-size:14px}
+.notice.warn{border-color:var(--warn);color:var(--warn)}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:1px;background:var(--line);border:1px solid var(--line);margin:8px 0}
+.kpi{background:var(--bg);padding:10px 12px}.kpi .v{font:600 26px/1.05 var(--cond);margin-top:4px}.kpi .v small{font:500 13px var(--sans);color:var(--muted)}
+.kpi.bad .v{color:var(--warn)}.kpi.good .v{color:var(--accent-900)}
+@media (prefers-color-scheme:dark){.kpi.good .v{color:var(--accent-600)}}
+.bar{height:8px;background:var(--n200);border:1px solid var(--line);position:relative;margin-top:6px}
+.bar i{position:absolute;left:0;top:0;bottom:0;background:var(--accent)}.bar i.bad{background:var(--warn)}
+.bar b{position:absolute;top:-3px;bottom:-3px;width:2px;background:var(--warn)}
+.strip{position:fixed;left:0;right:0;bottom:0;z-index:20;background:var(--bg);border-top:1px solid var(--line);padding:8px 18px env(safe-area-inset-bottom,8px)}
+.strip .in{max-width:900px;margin:0 auto;display:flex;gap:16px;align-items:center;flex-wrap:wrap}
+.strip .k{font:500 10.5px/1 var(--sans);letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.strip .v{font:600 20px/1.1 var(--cond)}
+.hidden{display:none!important}
+.sketch{border:1px solid var(--line);background:var(--surface);width:100%;height:auto;display:block}
+.sk-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}@media (max-width:640px){.sk-grid{grid-template-columns:1fr}}
+.toast{position:fixed;left:50%;bottom:90px;transform:translateX(-50%);background:var(--accent-900);color:#f2f2f3;padding:10px 16px;font-size:14px;z-index:40;opacity:0;transition:opacity .2s;pointer-events:none}
+.toast.on{opacity:1}
+.rig-row{display:grid;grid-template-columns:2fr 1fr 1fr 1fr auto;gap:8px;align-items:end;margin-bottom:8px}
+@media (max-width:560px){.rig-row{grid-template-columns:1fr 1fr 1fr}.rig-row .f:first-child{grid-column:1/-1}}
+/* ── printed plan ── */
+#sheet{display:none}
+body.preview #app{display:none}body.preview #sheet{display:block}
+.sheet{max-width:900px;margin:0 auto;padding:18px;background:#fff;color:#1d1f20;font-size:12.5px;line-height:1.4}
+.sheet h1{font-size:28px}.sheet h2{font-size:15px;margin:14px 0 6px;padding-bottom:3px;border-bottom:1px solid #1d1f20;text-transform:uppercase;letter-spacing:.06em;font-family:var(--sans);font-weight:600}
+.sheet .head{display:flex;justify-content:space-between;gap:16px;border-bottom:2px solid #144170;padding-bottom:8px}
+.sheet .head .kicker{color:#416180}
+.sheet .box{border:1px solid #1d1f20;padding:8px 10px}
+.sheet .cols{display:grid;grid-template-columns:1fr 1fr;gap:12px}.sheet .cols3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}
+.sheet table{font-size:12px}.sheet th,.sheet td{padding:4px 6px;border-bottom:1px solid #d4d4d7}.sheet th{color:#5d5d60}
+.sheet dl{display:grid;grid-template-columns:auto 1fr;gap:3px 10px;margin:0}.sheet dt{color:#5d5d60}.sheet dd{margin:0;font-weight:500}
+.sheet .verdict{border:2px solid #144170;padding:10px 12px;display:flex;gap:16px;align-items:center;flex-wrap:wrap;margin-top:10px}
+.sheet .verdict.crit{border-color:#a8502a}.sheet .verdict .big{font:600 24px/1 var(--cond)}
+.sheet .banner{background:#a8502a;color:#fff;padding:8px 12px;font-weight:600;margin:10px 0}
+.sheet .sign{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:8px}
+.sheet .sign div{border:1px solid #1d1f20;padding:6px 8px;height:78px;font-size:11px;color:#5d5d60}
+.sheet .sign b{display:block;color:#1d1f20;font-size:12px}
+.sheet .chk{columns:2;font-size:12px}.sheet .chk div{break-inside:avoid;padding:2px 0}
+.sheet .chk i{display:inline-block;width:11px;height:11px;border:1px solid #1d1f20;margin-right:6px;vertical-align:-1px}
+.sheet .chk i.on{background:#144170}
+.sheet .foot{margin-top:14px;font-size:10.5px;color:#5d5d60;border-top:1px solid #d4d4d7;padding-top:6px}
+.sheet .keep{break-inside:avoid}
+@media print{
+  @page{size:A4;margin:12mm}
+  body{background:#fff}#app,.strip,.toast,header.top,.noprint{display:none!important}#sheet{display:block!important}
+  .sheet{max-width:none;padding:0}.sheet .box,.sheet table,.sheet .verdict,.sheet .keep{break-inside:avoid}
+}
+</style>
+</head>
+<body>
+<header class="top"><div class="bar">
+  <div class="brand">Lift planner<small>Sennebogen cranes</small></div>
+  <div class="sp"></div>
+</div></header>
+
+<div id="app" class="wrap">
+  <div style="padding-top:14px">
+    <div class="kicker">Lift plan</div>
+    <h1 id="planTitle">Lift plan</h1>
+    <div class="row" style="margin-top:10px">
+      <label class="f" style="flex:1;min-width:200px">Saved plans<select id="planSel"></select></label>
+      <button class="btn small" id="newPlan">New plan</button>
+      <button class="btn small" id="dupPlan">Duplicate</button>
+      <button class="btn small warn" id="delPlan">Delete</button>
+    </div>
+    <div class="seg" style="margin-top:12px" id="tabs">
+      <button data-tab="lift" aria-pressed="true">Lift</button><button data-tab="crane">Crane &amp; chart</button><button data-tab="load">Load &amp; rigging</button><button data-tab="check">Checks</button><button data-tab="doc">Plan document</button>
+    </div>
+  </div>
+  <div id="body"></div>
+</div>
+
+<div class="strip" id="strip"></div>
+<div id="sheet"></div>
+<div class="toast" id="toast"></div>
+
+<script>
+"use strict";
+/* ─────────────────────────────────────────────────────────────────────────────
+   Lift planner for Sennebogen telescopic crawler cranes.
+   Standalone, no Firebase – plans and load charts live in localStorage on this device
+   (export/import JSON to move them). Capacities are read from a chart you enter from the
+   machine's rating book; nothing here replaces the crane's load moment indicator or the
+   rating book, and critical lifts still need an engineered lift study.
+   ───────────────────────────────────────────────────────────────────────────── */
+const $=s=>document.querySelector(s),$$=s=>[...document.querySelectorAll(s)];
+const esc=s=>String(s==null?"":s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const num=v=>{const n=parseFloat(v);return isFinite(n)?n:0};
+const fmt=(n,d=1)=>n==null||!isFinite(n)?"–":Number(n).toLocaleString("en-AU",{minimumFractionDigits:d,maximumFractionDigits:d});
+const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,6);
+const today=()=>{const d=new Date();return new Date(d.getTime()-d.getTimezoneOffset()*6e4).toISOString().slice(0,10)};
+const store={get(k,d){try{const v=localStorage.getItem("lp."+k);return v?JSON.parse(v):d}catch(e){return d}},set(k,v){localStorage.setItem("lp."+k,JSON.stringify(v))}};
+const BP='<i class="c tl"></i><i class="c tr"></i><i class="c bl"></i><i class="c br"></i>';
+let toastT;function toast(m){const t=$("#toast");t.textContent=m;t.classList.add("on");clearTimeout(toastT);toastT=setTimeout(()=>t.classList.remove("on"),2200)}
+
+/* Sennebogen range – indicative headline figures from public sources only. They are shown for
+   orientation and used to sanity-check an entered chart; every capacity used in a check comes
+   from the chart you enter from the machine's own rating book. */
+const MODELS=[
+  {id:"613E",name:"613 E",cap:16,note:"16 t class telescopic crawler"},
+  {id:"643E",name:"643 E",cap:40,boom:30,note:"40 t, 30 m main boom"},
+  {id:"653E",name:"653 E",cap:50,boom:30.4,hookH:43,note:"50 t, hook height to 43 m"},
+  {id:"673E",name:"673 E",cap:70,hookH:51,note:"70 t, hook height to 51 m"},
+  {id:"683E",name:"683 E",cap:80,boom:42,hookH:57,note:"80 t, 42 m four-section boom, 57 m with jib, track width 2.68–4.2 m (chart follows track setting)"},
+  {id:"6103E",name:"6103 E",cap:100,boomMax:62,note:"100 t, boom systems to 62 m"},
+  {id:"6113E",name:"6113 E",cap:120,boom:46.8,boomMax:62,hookH:67,note:"120 t, 46.8 m pinned boom, 62 m with extension and jib"},
+  {id:"6133E",name:"6133 E",cap:130,hookH:67,note:"130 t, hook height to 67 m"},
+  {id:"other",name:"Other Sennebogen / custom",note:""}];
+const modelOf=id=>MODELS.find(m=>m.id===id)||MODELS[MODELS.length-1];
+
+/* A fictitious chart so the tool can be tried before a real rating book is entered.
+   It is NOT a Sennebogen rating – every plan built on it prints a warning banner. */
+const DEMO_CHART={id:"demo",demo:true,name:"DEMO chart – fictitious 80 t class (not a rating)",model:"683E",
+  cfg:"Main boom, 360°, tracks extended, full counterweight (fictitious)",cwt:24,includesHook:false,hookMass:0.8,hookLen:2.0,
+  pivotH:2.2,pivotX:1.0,opWeight:92,trackLen:7.6,shoeW:0.9,maxWind:9.8,source:"Demo data – replace with the rating book for the machine on site",
+  booms:[13.5,24,30,36,42],radii:[4,5,6,7,8,9,10,12,14,16,18,20,22,24,26,28,30,32,34,36,38],
+  cap:[[80,null,null,null,null],[70,45,null,null,null],[60,42,34,null,null],[52,38,31,26,null],[45,34,28,24,20],[40,30,25,22,18.5],[36,27,23,20,17],[28,22,19,17,14.5],[null,18,16,14.5,12.5],[null,15,13.5,12.5,11],[null,12.5,11.5,10.8,9.6],[null,10.5,9.8,9.4,8.4],[null,8.8,8.4,8.2,7.4],[null,null,7.2,7.1,6.5],[null,null,6.2,6.2,5.7],[null,null,5.3,5.4,5.0],[null,null,null,4.7,4.4],[null,null,null,4.1,3.9],[null,null,null,3.5,3.4],[null,null,null,null,2.9],[null,null,null,null,2.4]]};
+
+const CHECKS=[
+  ["weight","Load weight verified from drawings, weighbridge or calculation (source recorded)"],
+  ["config","Crane configuration on site matches this plan and the LMI is set to it (boom, counterweight, track width, slew range)"],
+  ["ground","Ground assessed: bearing capacity confirmed, mats placed, no services, voids or soft fill under the tracks"],
+  ["edge","Tracks kept back from excavations and unsupported edges (at least the depth of the excavation unless engineered)"],
+  ["exclusion","Exclusion zone set out, barricaded and tagged – no person under or near the suspended load"],
+  ["gear","Lifting gear inspected and tagged, WLL at or above the leg tensions below, lifting points checked"],
+  ["taglines","Tag lines fitted and attendants clear of pinch points"],
+  ["comms","Communication method agreed between operator and dogman (radio or hand signals), one dogman directs"],
+  ["wind","Wind speed checked before and during the lift; stop at the limit in the rating book or lower for sail area"],
+  ["clearance","Clearances to structures, formwork, powerlines and other plant confirmed, including the slew path"],
+  ["licence","Operator and dogman hold the current High Risk Work Licence for this crane and the crane pre-start is done"],
+  ["permit","Permits and notifications in place; lift briefed at the pre-start and recorded in the site diary"],
+  ["trial","Trial lift: load raised just clear to check centre of gravity, rigging and brakes before the full lift"],
+  ["emergency","Emergency plan agreed: abort signal, set-down area, first aid and site contacts"]];
+const FLAGS=[
+  ["multi","Two or more cranes share the load"],
+  ["personnel","Persons lifted in a work box"],
+  ["blind","Operator cannot see the load for part of the lift (blind lift)"],
+  ["live","Lift over live roads, rail, services or occupied areas"],
+  ["power","Within the no-go zone of overhead powerlines"],
+  ["unverified","Load weight or centre of gravity not verified"],
+  ["edge","Crane set up near an excavation, batter or retaining structure"],
+  ["special","Unusual rigging, tilt-up, turning the load in the air, or a load that is fragile or high value"]];
+
+/* ── state ── */
+const S={plans:store.get("plans",[]),charts:store.get("charts",null),settings:store.get("settings",{critPct:75,minClear:0.5,company:"",project:""}),tab:"lift",planId:store.get("planId",null)};
+if(!S.charts){S.charts=[DEMO_CHART];store.set("charts",S.charts)}
+function newPlan(){return {id:uid(),createdAt:Date.now(),title:"",liftNo:"",date:today(),time:"",location:"",description:"",
+  liftSupervisor:"",operator:"",dogman:"",preparedBy:"",permitNo:"",
+  model:"683E",chartId:S.charts[0]?S.charts[0].id:"",boom:null,pickR:8,setR:10,slewDeg:90,
+  loadMass:5,loadSource:"calculated",allowPct:10,loadL:"",loadW:"",loadH:1.0,cog:"",
+  rig:[{name:"Slings (2 leg chain)",mass:0.06,wll:8.0,qty:1},{name:"Shackles",mass:0.02,wll:8.5,qty:2}],
+  legs:2,legAngle:45,allLegs:false,rigH:2.0,
+  setLevel:0,clearance:0.5,obstD:"",obstH:"",
+  opWeightOvr:"",bearing:"",mats:false,matL:5,matW:1,matN:2,
+  flags:{},checks:{},hazards:"",notes:""}}
+function plan(){let p=S.plans.find(x=>x.id===S.planId);if(!p){if(!S.plans.length)S.plans.push(newPlan());p=S.plans[0];S.planId=p.id}return p}
+function save(){const p=plan();p.updatedAt=Date.now();store.set("plans",S.plans);store.set("planId",S.planId);store.set("charts",S.charts);store.set("settings",S.settings)}
+const chartOf=id=>S.charts.find(c=>c.id===id)||null;
+const planName=p=>p.title||p.description||("Lift plan "+(p.liftNo||new Date(p.createdAt).toLocaleDateString("en-AU")));
+
+/* ── chart grid parsing ── */
+function parseGrid(txt){
+  const tabbed=/\t/.test(txt);const rows=txt.trim().split(/\r?\n/).map(r=>r.replace(/\s+$/,"")).filter(r=>r.trim()).map(r=>tabbed?r.split("\t").map(c=>c.trim()):r.trim().split(/[,;]|\s+/).map(c=>c.trim()).filter(c=>c!==""));
+  if(rows.length<2)throw new Error("Need a header row of boom lengths and at least one radius row");
+  let head=rows[0];if(isNaN(parseFloat(head[0])))head=head.slice(1);
+  const booms=head.map(parseFloat);if(!booms.length||booms.some(b=>!isFinite(b)))throw new Error("First row must be the boom lengths in metres, e.g. 'Radius 24 30 36 42'");
+  const radii=[],cap=[];
+  rows.slice(1).forEach(r=>{const R=parseFloat(r[0]);if(!isFinite(R))throw new Error("Each row must start with the radius: "+r.join(" "));
+    radii.push(R);cap.push(booms.map((b,i)=>{const v=parseFloat(r[i+1]);return isFinite(v)&&v>0?v:null}))});
+  const order=radii.map((r,i)=>i).sort((a,b)=>radii[a]-radii[b]);
+  return {booms,radii:order.map(i=>radii[i]),cap:order.map(i=>cap[i])}}
+function gridText(c){return ["Radius\t"+c.booms.join("\t"),...c.radii.map((r,i)=>r+"\t"+c.cap[i].map(v=>v==null?"-":v).join("\t"))].join("\n")}
+
+/* Rated capacity for a boom column at a working radius: the chart value at the next tabulated
+   radius at or beyond the working radius (no interpolation – the usual conservative practice). */
+function capAt(c,bi,R){
+  if(!c||bi==null||!(R>0))return {cap:null,why:"no chart"};
+  let minR=null,maxR=null;c.radii.forEach((r,i)=>{if(c.cap[i][bi]!=null){if(minR==null)minR=r;maxR=r}});
+  if(minR==null)return {cap:null,why:"no ratings for this boom length"};
+  if(R>maxR)return {cap:null,why:`beyond the chart – ${fmt(c.booms[bi])} m boom is rated to ${fmt(maxR)} m radius`,ri:c.radii.indexOf(maxR)};
+  for(let i=0;i<c.radii.length;i++){if(c.radii[i]>=R&&c.cap[i][bi]!=null)return {cap:c.cap[i][bi],ri:i,chartR:c.radii[i],below:R<minR?minR:null}}
+  return {cap:null,why:"no rating at this radius"}}
+
+/* ── the calculation ── */
+function calc(p){
+  const c=chartOf(p.chartId),m=modelOf(p.model),R={chart:c,model:m,warnings:[],fails:[]};
+  const bi=c&&p.boom!=null?c.booms.indexOf(num(p.boom)):-1;R.bi=bi>=0?bi:(c?0:-1);R.boom=c?c.booms[R.bi]:null;
+  // load
+  R.allow=num(p.loadMass)*num(p.allowPct)/100;
+  R.rigMass=(p.rig||[]).reduce((s,r)=>s+num(r.mass)*Math.max(1,num(r.qty)||1),0);
+  R.hookMass=c?num(c.hookMass):0;R.hookCounted=c?!c.includesHook:false;
+  R.gross=num(p.loadMass)+R.allow+R.rigMass+(R.hookCounted?R.hookMass:0);
+  R.belowHook=num(p.loadMass)+R.allow+R.rigMass;
+  // capacity at pick and set
+  const pr=Math.max(0,num(p.pickR)),sr=Math.max(0,num(p.setR));R.govR=Math.max(pr,sr);
+  R.pick=capAt(c,R.bi,pr);R.set=capAt(c,R.bi,sr);R.pick.R=pr;R.set.R=sr;
+  const gov=(R.pick.cap==null)?R.pick:(R.set.cap==null)?R.set:(R.pick.cap<=R.set.cap?R.pick:R.set);R.gov=gov;
+  R.cap=gov.cap;R.pct=R.cap?R.gross/R.cap*100:null;
+  if(!c)R.fails.push("No load chart selected – enter the rating book chart for the crane configuration.");
+  else if(R.cap==null)R.fails.push("Radius is "+gov.why+".");
+  else if(R.pct>100)R.fails.push(`Gross load ${fmt(R.gross,2)} t exceeds the rated capacity ${fmt(R.cap,2)} t at ${fmt(gov.chartR)} m – not permitted.`);
+  if(gov.below)R.warnings.push(`Working radius is inside the chart's minimum radius (${fmt(gov.below)} m) – confirm the boom can reach that close.`);
+  if(c&&m.cap&&c.cap.some(r=>r.some(v=>v>m.cap)))R.warnings.push(`The chart has ratings above the ${m.name} headline capacity of ${m.cap} t – check the chart entry.`);
+  if(c&&c.demo)R.warnings.push("The DEMO chart is fictitious. Enter the rating book chart for the machine before this plan is used.");
+  // classification
+  const crit=num(S.settings.critPct)||75;R.critPct=crit;R.flagHits=FLAGS.filter(([k])=>p.flags&&p.flags[k]).map(([,l])=>l);
+  R.reasons=[];if(R.pct!=null&&R.pct>=crit)R.reasons.push(`${fmt(R.pct,0)}% of rated capacity (${crit}% or more)`);R.reasons.push(...R.flagHits);
+  if(p.loadSource==="estimated"&&!(p.flags&&p.flags.unverified))R.reasons.push("Load weight estimated, not verified");
+  R.critical=R.reasons.length>0;
+  // height & boom geometry
+  R.geom=null;
+  if(c&&c.pivotH>0&&R.boom){const L=R.boom,dx=R.govR-num(c.pivotX);const g={L};
+    if(dx>=L){g.unreach=true;R.fails.push(`A ${fmt(L)} m boom cannot reach ${fmt(R.govR)} m radius – choose a longer boom.`)}
+    else{g.angle=Math.acos(Math.max(0,dx)/L)*180/Math.PI;g.tipH=num(c.pivotH)+Math.sqrt(L*L-dx*dx);g.hookAvail=g.tipH-num(c.hookLen);
+      g.hookReq=num(p.setLevel)+num(p.loadH)+num(p.rigH)+num(p.clearance);g.hookOK=g.hookAvail>=g.hookReq;
+      if(!g.hookOK)R.fails.push(`Hook height available ${fmt(g.hookAvail)} m is less than the ${fmt(g.hookReq)} m needed – longer boom or shorter rigging.`);
+      if(g.angle<20)R.warnings.push(`Boom angle ${fmt(g.angle,0)}° is very flat – check the rating book's minimum angle.`);
+      if(g.angle>82)R.warnings.push(`Boom angle ${fmt(g.angle,0)}° is close to vertical – check the rating book's maximum angle.`);
+      const od=num(p.obstD),oh=num(p.obstH);if(od>0&&oh>0){const t=Math.tan(g.angle*Math.PI/180);g.boomAtObst=num(c.pivotH)+(od-num(c.pivotX))*t;g.obstClear=g.boomAtObst-oh;
+        if(od>=R.govR)R.warnings.push("The obstacle is beyond the working radius – the boom does not pass over it, but the load may.");
+        else if(g.obstClear<num(S.settings.minClear))R.fails.push(`Boom passes ${fmt(g.obstClear,2)} m ${g.obstClear<0?"below the top of":"above"} the obstacle at ${fmt(od)} m – less than the ${fmt(num(S.settings.minClear),1)} m minimum.`)}}
+    R.geom=g}
+  else if(c)R.warnings.push("Enter the boom pivot height and offset on the chart to check hook height and boom clearance.");
+  // ground bearing
+  R.ground=null;const opW=num(p.opWeightOvr)||(c?num(c.opWeight):0);
+  if(opW>0){const total=opW+R.gross,g9=9.81,gr={opW,total};
+    if(c&&c.trackLen>0&&c.shoeW>0){gr.trackArea=2*num(c.trackLen)*num(c.shoeW);gr.avg=total*g9/gr.trackArea;gr.oneTrack=gr.avg*2}
+    if(p.mats&&num(p.matL)>0&&num(p.matW)>0){gr.matArea=num(p.matL)*num(p.matW)*Math.max(1,num(p.matN));gr.matAvg=total*g9/gr.matArea;gr.matOne=gr.matAvg*2}
+    gr.design=gr.matArea?gr.matOne:gr.oneTrack;gr.allow=num(p.bearing);
+    if(gr.allow>0&&gr.design!=null){gr.ok=gr.design<=gr.allow;if(!gr.ok)R.fails.push(`Ground pressure ${fmt(gr.design,0)} kPa (one track loaded) exceeds the allowable ${fmt(gr.allow,0)} kPa – mats or a better set-up position.`)}
+    else if(gr.design!=null)R.warnings.push("Enter the allowable ground bearing pressure (from the geotech) to check the set-up.");
+    R.ground=gr}
+  // slings
+  const legs=Math.max(1,num(p.legs)||1),eff=p.allLegs||legs<4?legs:2,ang=Math.min(75,Math.max(0,num(p.legAngle)));
+  R.sling={legs,eff,ang,tension:R.belowHook/eff/Math.cos(ang*Math.PI/180)};
+  if(ang>60)R.warnings.push("Sling angle to vertical over 60° – tensions climb steeply; use longer slings or a spreader.");
+  const minWll=Math.min(...(p.rig||[]).filter(r=>num(r.wll)>0).map(r=>num(r.wll)));
+  if(isFinite(minWll)){R.sling.minWll=minWll;if(R.sling.tension>minWll)R.fails.push(`Leg tension ${fmt(R.sling.tension,2)} t exceeds the lowest gear WLL ${fmt(minWll,2)} t.`)}
+  if(c&&num(c.maxWind)>0)R.maxWind=num(c.maxWind);
+  R.ok=R.fails.length===0;return R}
+
+/* ── rendering ── */
+function field(k,label,type,attrs,v){const p=plan();const val=v!==undefined?v:(p[k]==null?"":p[k]);
+  return `<label class="f">${label}<input data-k="${k}" type="${type||"text"}" ${type==="number"?'inputmode="decimal"':""} ${attrs||""} value="${esc(val)}"></label>`}
+function render(){const p=plan();$("#planTitle").textContent=planName(p);
+  $("#planSel").innerHTML=S.plans.slice().sort((a,b)=>(b.updatedAt||b.createdAt)-(a.updatedAt||a.createdAt)).map(x=>`<option value="${x.id}" ${x.id===p.id?"selected":""}>${esc(planName(x))} · ${esc(x.date||"")}</option>`).join("");
+  $$("#tabs button").forEach(b=>b.setAttribute("aria-pressed",b.dataset.tab===S.tab));
+  document.body.classList.toggle("preview",S.tab==="doc");
+  ({lift:tabLift,crane:tabCrane,load:tabLoad,check:tabCheck,doc:tabDoc})[S.tab]();renderStrip()}
+function renderStrip(){const R=calc(plan());const cls=R.fails.length?"warn":R.critical?"crit":"ok";
+  $("#strip").innerHTML=`<div class="in"><div><div class="k">Gross load</div><div class="v">${fmt(R.gross,2)} t</div></div><div><div class="k">Rated at ${fmt(R.gov.chartR||R.govR)} m</div><div class="v">${R.cap?fmt(R.cap,2)+" t":"–"}</div></div><div><div class="k">Utilisation</div><div class="v ${R.pct>100?"warn":""}">${R.pct!=null?fmt(R.pct,0)+"%":"–"}</div></div><div class="sp"></div><span class="pill ${cls}">${R.fails.length?"Not OK":R.critical?"Critical lift":"Standard lift"}</span></div>`;
+  if(S.tab!=="doc")$("#sheet").innerHTML=""}
+
+function tabLift(){const p=plan();
+  $("#body").innerHTML=`<div class="card"><div class="kicker">01</div><h3>Lift details</h3><div class="grid">
+    ${field("title","Plan title","text",'placeholder="e.g. Set precast wall panel W3"')}${field("liftNo","Lift plan no.","text",'placeholder="LP-001"')}
+    ${field("date","Date","date")}${field("time","Time","time")}
+    <label class="f wide">Location on site<input data-k="location" placeholder="e.g. Zone A, southern deck" value="${esc(p.location)}"></label>
+    <label class="f wide">Description of the lift<textarea data-k="description" style="font-family:var(--sans);min-height:70px" placeholder="What is lifted, from where to where, how it is landed">${esc(p.description)}</textarea></label>
+    ${field("liftSupervisor","Lift supervisor")}${field("operator","Crane operator (HRWL class)")}${field("dogman","Dogman / rigger (HRWL)")}${field("preparedBy","Prepared by")}${field("permitNo","Permit / notification no.")}
+  </div></div>
+  <div class="card"><div class="kicker">Classification</div><h3>Does anything make this a critical lift?</h3>
+    <p class="small muted">Utilisation of ${esc(S.settings.critPct)}% or more of the rated capacity makes the lift critical automatically. Tick anything else that applies.</p>
+    ${FLAGS.map(([k,l])=>`<label class="chk"><input type="checkbox" data-flag="${k}" ${p.flags&&p.flags[k]?"checked":""}>${esc(l)}</label>`).join("")}
+    <label class="f" style="margin-top:12px">Site-specific hazards and controls<textarea data-k="hazards" style="font-family:var(--sans)" placeholder="e.g. Lift over live formwork deck – deck crew withdrawn; tag line from the east side only…">${esc(p.hazards)}</textarea></label>
+  </div>
+  <div class="card"><div class="kicker">Settings</div><h3>Planner settings</h3><div class="grid">
+    <label class="f">Critical lift threshold (% of rated)<input data-set="critPct" type="number" inputmode="decimal" value="${esc(S.settings.critPct)}"></label>
+    <label class="f">Minimum boom clearance (m)<input data-set="minClear" type="number" inputmode="decimal" step="0.1" value="${esc(S.settings.minClear)}"></label>
+    <label class="f">Company<input data-set="company" value="${esc(S.settings.company)}"></label>
+    <label class="f wide">Project<input data-set="project" value="${esc(S.settings.project)}"></label></div>
+    <div class="row" style="margin-top:12px"><button class="btn small" id="exportAll">Export plans &amp; charts (JSON)</button><label class="btn small" for="importAll" style="cursor:pointer">Import JSON</label><input type="file" id="importAll" accept="application/json" class="hidden"></div>
+    <p class="small muted" style="margin-top:8px">Everything is stored on this device only. Export before changing phones, and import on the laptop to print from there.</p>
+  </div>`}
+
+function tabCrane(){const p=plan(),c=chartOf(p.chartId),m=modelOf(p.model),R=calc(p);
+  const charts=S.charts.filter(x=>x.model===p.model||p.model==="other"||x.model==="other");
+  $("#body").innerHTML=`<div class="card"><div class="kicker">02</div><h3>Crane</h3><div class="grid">
+    <label class="f">Sennebogen model<select data-k="model">${MODELS.map(x=>`<option value="${x.id}" ${x.id===p.model?"selected":""}>${esc(x.name)}${x.cap?" · "+x.cap+" t":""}</option>`).join("")}</select></label>
+    <label class="f wide">Load chart (configuration)<select data-k="chartId"><option value="">– choose –</option>${charts.map(x=>`<option value="${x.id}" ${x.id===p.chartId?"selected":""}>${esc(x.name)}</option>`).join("")}</select></label>
+    ${c?`<label class="f">Boom length (m)<select data-k="boom">${c.booms.map((b,i)=>`<option value="${b}" ${i===R.bi?"selected":""}>${fmt(b)} m</option>`).join("")}</select></label>`:""}
+    ${field("pickR","Pick radius (m)","number",'step="0.1" min="0"')}${field("setR","Set radius (m)","number",'step="0.1" min="0"')}${field("slewDeg","Slew between pick and set (°)","number",'step="5" min="0" max="360"')}
+  </div>
+  ${m.note?`<p class="small muted" style="margin-top:10px"><b>${esc(m.name)}</b>: ${esc(m.note)}. Headline figures from public sources for orientation only – the rating book for the machine governs.</p>`:""}
+  ${c?`<p class="small" style="margin-top:8px">Chart: <b>${esc(c.cfg||c.name)}</b>${c.cwt?` · counterweight ${fmt(c.cwt)} t`:""} · capacities ${c.includesHook?"include":"exclude"} the hook block${c.source?` · source: ${esc(c.source)}`:""}</p>`:""}
+  ${c&&c.demo?`<div class="notice warn">This is the fictitious DEMO chart. Add the chart from the rating book for the machine and configuration on site before relying on anything here.</div>`:""}
+  </div>
+  ${c?`<div class="card"><div class="kicker">Rating at the working radius</div><h3>${esc(c.name)}</h3>
+    <div class="kpis"><div class="kpi"><div class="kicker">Pick · ${fmt(R.pick.R)} m</div><div class="v">${R.pick.cap?fmt(R.pick.cap,2)+" <small>t at "+fmt(R.pick.chartR)+" m</small>":"<small>"+esc(R.pick.why||"")+"</small>"}</div></div>
+    <div class="kpi"><div class="kicker">Set · ${fmt(R.set.R)} m</div><div class="v">${R.set.cap?fmt(R.set.cap,2)+" <small>t at "+fmt(R.set.chartR)+" m</small>":"<small>"+esc(R.set.why||"")+"</small>"}</div></div>
+    <div class="kpi ${R.pct>100?"bad":"good"}"><div class="kicker">Governing</div><div class="v">${R.cap?fmt(R.cap,2)+" t":"–"}</div></div></div>
+    <div class="tablewrap"><table><thead><tr><th>Radius</th>${c.booms.map((b,i)=>`<th class="n ${i===R.bi?"pick":""}">${fmt(b)} m</th>`).join("")}</tr></thead><tbody>
+    ${c.radii.map((r,i)=>`<tr class="${(R.pick.ri===i||R.set.ri===i)&&R.cap!=null?"hit":""}"><td><b>${fmt(r)} m</b></td>${c.cap[i].map((v,j)=>`<td class="n ${j===R.bi?"pick":""}">${v==null?'<span class="muted">–</span>':fmt(v,v<10?2:1)}</td>`).join("")}</tr>`).join("")}</tbody></table></div>
+    <div class="row"><button class="btn small" data-editchart="${esc(c.id)}">Edit this chart</button><button class="btn small" data-dupchart="${esc(c.id)}">Copy as a new chart</button>${c.demo?"":`<button class="btn small warn" data-delchart="${esc(c.id)}">Delete</button>`}</div></div>`:""}
+  <div class="card" id="chartEditor"><div class="kicker">Rating book</div><h3>${S.editChart?"Edit chart":"Add a chart from the rating book"}</h3>
+    <p class="small muted">One chart per configuration (boom system, counterweight, track width, slew range) – the LMI on the crane uses the same split. Paste the table: first row the boom lengths, then one row per radius with the rated load in tonnes for each boom length and “-” where the book shows none. Tabs, commas or spaces all work.</p>
+    ${S.editChart?"":'<button class="btn small" id="openEditor">Add a chart</button>'}
+    ${S.editChart?chartForm(S.editChart):""}
+  </div>`}
+function chartForm(c){const f=(k,l,t,a)=>`<label class="f">${l}<input data-c="${k}" type="${t||"text"}" ${t==="number"?'inputmode="decimal"':""} ${a||""} value="${esc(c[k]==null?"":c[k])}"></label>`;
+  return `<div class="grid" style="margin-top:12px">
+    <label class="f wide">Chart name<input data-c="name" value="${esc(c.name||"")}" placeholder="e.g. 683 E – 42 m main boom, 360°, tracks 4.2 m, 24 t cwt"></label>
+    <label class="f">Model<select data-c="model">${MODELS.map(x=>`<option value="${x.id}" ${x.id===c.model?"selected":""}>${esc(x.name)}</option>`).join("")}</select></label>
+    ${f("cfg","Configuration (as printed in the book)")}${f("cwt","Counterweight (t)","number",'step="0.1"')}
+    <label class="f">Capacities include the hook block?<select data-c="includesHook"><option value="0" ${c.includesHook?"":"selected"}>No – deduct hook (Sennebogen books usually)</option><option value="1" ${c.includesHook?"selected":""}>Yes</option></select></label>
+    ${f("hookMass","Hook block mass (t)","number",'step="0.01"')}${f("hookLen","Hook block + headroom (m)","number",'step="0.1"')}
+    ${f("pivotH","Boom pivot height above ground (m)","number",'step="0.1"')}${f("pivotX","Pivot offset behind slew centre (m)","number",'step="0.1"')}
+    ${f("opWeight","Operating weight incl. cwt (t)","number",'step="0.1"')}${f("trackLen","Track contact length (m)","number",'step="0.1"')}${f("shoeW","Track shoe width (m)","number",'step="0.01"')}${f("maxWind","Max wind in the book (m/s)","number",'step="0.1"')}
+    ${f("source","Source (book, page, revision)")}
+    <label class="f wide">Rating table<textarea data-c="grid" rows="10">${esc(c.grid!=null?c.grid:(c.booms?gridText(c):"Radius\t24\t30\t36\t42\n6\t\n8\t\n10\t"))}</textarea></label></div>
+    <div class="row" style="margin-top:12px"><button class="btn primary bp" id="saveChart">${BP}Save chart</button><button class="btn" id="cancelChart">Cancel</button></div>
+    <p class="small muted" style="margin-top:8px">Geometry fields are optional but needed for the hook-height and clearance checks. Pivot offset is positive when the boom foot sits behind the centre of rotation.</p>`}
+
+function tabLoad(){const p=plan(),R=calc(p);
+  $("#body").innerHTML=`<div class="card"><div class="kicker">03</div><h3>Load</h3><div class="grid">
+    ${field("loadMass","Load mass (t)","number",'step="0.01" min="0"')}
+    <label class="f">Weight source<select data-k="loadSource">${[["verified","Verified – weighbridge / supplier"],["calculated","Calculated from drawings"],["estimated","Estimated"]].map(([k,l])=>`<option value="${k}" ${p.loadSource===k?"selected":""}>${l}</option>`).join("")}</select></label>
+    ${field("allowPct","Allowance for unknowns (%)","number",'step="1" min="0"')}
+    ${field("loadL","Length (m)","number",'step="0.1"')}${field("loadW","Width (m)","number",'step="0.1"')}${field("loadH","Height (m)","number",'step="0.1"')}
+    <label class="f wide">Centre of gravity / lifting points<input data-k="cog" value="${esc(p.cog)}" placeholder="e.g. central; 4 cast-in anchors 2.4 m apart"></label></div>
+    <p class="small muted">Use 10% where the weight is calculated and nothing where it is weighed. Concrete at 2.5 t/m³ including reo; formwork panels and falsework from the supplier's data.</p></div>
+  <div class="card"><div class="kicker">Rigging</div><h3>Lifting gear below the hook</h3>
+    <div id="rigRows">${(p.rig||[]).map((r,i)=>`<div class="rig-row"><label class="f">Item<input data-rig="${i}" data-rk="name" value="${esc(r.name)}"></label><label class="f">Mass (t)<input data-rig="${i}" data-rk="mass" type="number" inputmode="decimal" step="0.005" value="${esc(r.mass)}"></label><label class="f">WLL (t)<input data-rig="${i}" data-rk="wll" type="number" inputmode="decimal" step="0.1" value="${esc(r.wll)}"></label><label class="f">Qty<input data-rig="${i}" data-rk="qty" type="number" inputmode="numeric" step="1" min="1" value="${esc(r.qty||1)}"></label><button class="btn small" data-rigdel="${i}" aria-label="Remove">✕</button></div>`).join("")}</div>
+    <button class="btn small" id="rigAdd">Add gear</button>
+    <div class="grid" style="margin-top:14px">
+      ${field("legs","Sling legs","number",'step="1" min="1" max="8"')}${field("legAngle","Leg angle to vertical (°)","number",'step="5" min="0" max="75"')}${field("rigH","Rigging height hook to load (m)","number",'step="0.1"')}
+      <label class="chk" style="border:0;align-self:end"><input type="checkbox" data-k="allLegs" ${p.allLegs?"checked":""}>Four legs share equally (spreader or verified)</label></div>
+    <div class="kpis"><div class="kpi"><div class="kicker">Below the hook</div><div class="v">${fmt(R.belowHook,2)} <small>t</small></div></div><div class="kpi"><div class="kicker">Tension per leg</div><div class="v ${R.sling.minWll&&R.sling.tension>R.sling.minWll?"warn":""}">${fmt(R.sling.tension,2)} <small>t · ${R.sling.eff} of ${R.sling.legs} legs at ${fmt(R.sling.ang,0)}°</small></div></div><div class="kpi"><div class="kicker">Lowest WLL</div><div class="v">${R.sling.minWll?fmt(R.sling.minWll,2)+" <small>t</small>":"–"}</div></div></div>
+    <p class="small muted">With four legs only two are assumed to carry the load unless a spreader or an engineered arrangement shares it. Tension = load ÷ legs ÷ cos(angle). WLL is the tag figure for the mode used.</p></div>
+  <div class="card"><div class="kicker">Gross load</div><h3>What the crane sees</h3>
+    <div class="tablewrap"><table><tbody>
+      <tr><td>Load</td><td class="n">${fmt(num(p.loadMass),2)} t</td></tr><tr><td>Allowance ${fmt(num(p.allowPct),0)}%</td><td class="n">${fmt(R.allow,2)} t</td></tr>
+      <tr><td>Lifting gear</td><td class="n">${fmt(R.rigMass,2)} t</td></tr><tr><td>Hook block ${R.hookCounted?"":"(included in the chart)"}</td><td class="n">${R.hookCounted?fmt(R.hookMass,2)+" t":"–"}</td></tr>
+      <tr class="hit"><td>Gross load</td><td class="n">${fmt(R.gross,2)} t</td></tr></tbody></table></div></div>`}
+
+function tabCheck(){const p=plan(),R=calc(p),c=R.chart,g=R.geom,gr=R.ground;
+  $("#body").innerHTML=`<div class="card"><div class="kicker">04</div><h3>Capacity</h3>
+    <div class="kpis"><div class="kpi"><div class="kicker">Gross load</div><div class="v">${fmt(R.gross,2)} <small>t</small></div></div><div class="kpi"><div class="kicker">Rated · ${esc(R.gov===R.pick?"pick":"set")} at ${fmt(R.gov.chartR||R.govR)} m</div><div class="v">${R.cap?fmt(R.cap,2)+" <small>t</small>":"–"}</div></div><div class="kpi ${R.pct>100?"bad":R.pct>=R.critPct?"":"good"}"><div class="kicker">Utilisation</div><div class="v">${R.pct!=null?fmt(R.pct,0)+"%":"–"}</div>${R.pct!=null?`<div class="bar"><i class="${R.pct>100?"bad":""}" style="width:${Math.min(100,R.pct)}%"></i><b style="left:${R.critPct}%"></b></div>`:""}</div><div class="kpi"><div class="kicker">Margin</div><div class="v">${R.cap?fmt(R.cap-R.gross,2)+" <small>t</small>":"–"}</div></div></div>
+    ${R.fails.map(f=>`<div class="notice warn">✕ ${esc(f)}</div>`).join("")}${R.warnings.map(w=>`<div class="notice">△ ${esc(w)}</div>`).join("")}
+    <p class="small muted">Rated capacity is the chart figure at the next tabulated radius at or beyond the working radius, for the selected boom length. The crane's LMI and the rating book govern on the day.</p></div>
+  <div class="card"><div class="kicker">Height and clearance</div><h3>Hook height</h3><div class="grid">
+    ${field("setLevel","Set-down level above crane standing level (m)","number",'step="0.1"')}${field("clearance","Clearance under the load (m)","number",'step="0.1"')}
+    ${field("obstD","Obstacle distance from slew centre (m)","number",'step="0.1"')}${field("obstH","Obstacle height (m)","number",'step="0.1"')}</div>
+    ${g&&!g.unreach?`<div class="kpis" style="margin-top:12px"><div class="kpi"><div class="kicker">Boom angle</div><div class="v">${fmt(g.angle,0)}°</div></div><div class="kpi"><div class="kicker">Boom tip height</div><div class="v">${fmt(g.tipH)} <small>m</small></div></div><div class="kpi ${g.hookOK?"good":"bad"}"><div class="kicker">Hook height available</div><div class="v">${fmt(g.hookAvail)} <small>m</small></div></div><div class="kpi"><div class="kicker">Hook height needed</div><div class="v">${fmt(g.hookReq)} <small>m</small></div></div>${g.obstClear!=null?`<div class="kpi ${g.obstClear>=num(S.settings.minClear)?"good":"bad"}"><div class="kicker">Boom over obstacle</div><div class="v">${fmt(g.obstClear,2)} <small>m</small></div></div>`:""}</div>`:`<p class="small muted" style="margin-top:10px">${g&&g.unreach?"Boom too short for the radius.":"Hook height needs the pivot geometry on the chart."}</p>`}
+    <p class="small muted">Needed = set-down level + load height + rigging height + clearance. Available = tip height − hook block and headroom. Boom clearance ignores the boom's depth – keep the minimum generous.</p></div>
+  <div class="card"><div class="kicker">Ground</div><h3>Bearing pressure</h3><div class="grid">
+    ${field("bearing","Allowable bearing pressure (kPa)","number",'step="10"')}${field("opWeightOvr","Operating weight override (t)","number",'step="0.1" placeholder="'+(c?fmt(num(c.opWeight)):"")+'"')}
+    <label class="chk" style="border:0;align-self:end"><input type="checkbox" data-k="mats" ${p.mats?"checked":""}>Crane mats under the tracks</label>
+    ${p.mats?field("matL","Mat length (m)","number",'step="0.1"')+field("matW","Mat width (m)","number",'step="0.1"')+field("matN","Number of mats (total)","number",'step="1" min="1"'):""}</div>
+    ${gr?`<div class="kpis" style="margin-top:12px"><div class="kpi"><div class="kicker">Crane + load</div><div class="v">${fmt(gr.total,1)} <small>t</small></div></div>${gr.avg!=null?`<div class="kpi"><div class="kicker">Average on tracks</div><div class="v">${fmt(gr.avg,0)} <small>kPa</small></div></div>`:""}${gr.matAvg!=null?`<div class="kpi"><div class="kicker">Average on mats</div><div class="v">${fmt(gr.matAvg,0)} <small>kPa</small></div></div>`:""}${gr.design!=null?`<div class="kpi ${gr.ok===false?"bad":gr.ok?"good":""}"><div class="kicker">Design · one track loaded</div><div class="v">${fmt(gr.design,0)} <small>kPa</small></div></div>`:""}</div>`:`<p class="small muted" style="margin-top:10px">Enter the operating weight (on the chart or as an override) to estimate ground pressure.</p>`}
+    <p class="small muted">A simple estimate: crane plus gross load spread over the track (or mat) contact area, doubled because slewing over the side puts most of the weight on one track. Use Sennebogen's ground pressure tables for the machine where the margin is tight, and the geotech's allowable pressure for the set-up position.</p></div>
+  <div class="card"><div class="kicker">Pre-lift checks</div><h3>Controls</h3>
+    ${CHECKS.map(([k,l])=>`<label class="chk"><input type="checkbox" data-check="${k}" ${p.checks&&p.checks[k]?"checked":""}>${esc(l)}</label>`).join("")}
+    <label class="f" style="margin-top:12px">Notes<textarea data-k="notes" style="font-family:var(--sans)">${esc(p.notes)}</textarea></label></div>`}
+
+/* ── sketches (SVG) ── */
+function sketchPlan(p,R){const W=360,H=300,cx=W/2,cy=H/2,c=R.chart;const maxR=Math.max(num(p.pickR),num(p.setR),6)*1.25;const k=(Math.min(W,H)/2-14)/maxR;
+  const tl=(c&&c.trackLen||7)*k,tw=(c&&c.shoeW||0.9)*k,gauge=(3.6)*k;
+  const pos=(r,deg)=>{const a=(deg-90)*Math.PI/180;return [cx+r*k*Math.cos(a),cy+r*k*Math.sin(a)]};
+  const [px,py]=pos(num(p.pickR),0),[sx,sy]=pos(num(p.setR),num(p.slewDeg));const lw=Math.max(num(p.loadL),1)*k,lh=Math.max(num(p.loadW),1)*k;
+  const rings=[2,4,6,8,10,12,14,16,18,20,24,28,32,36,40,48,56,64].filter(r=>r<=maxR);
+  return `<svg class="sketch" viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg" font-family="Barlow,Arial,sans-serif" font-size="10">
+    ${rings.map(r=>`<circle cx="${cx}" cy="${cy}" r="${r*k}" fill="none" stroke="#98989b" stroke-width=".5" stroke-dasharray="3 3"/><text x="${cx+3}" y="${cy+r*k-2}" fill="#7a7a7d">${r}</text>`).join("")}
+    <rect x="${cx-gauge/2-tw/2}" y="${cy-tl/2}" width="${tw}" height="${tl}" fill="#5980a6" opacity=".5"/><rect x="${cx+gauge/2-tw/2}" y="${cy-tl/2}" width="${tw}" height="${tl}" fill="#5980a6" opacity=".5"/>
+    <rect x="${cx-gauge/2}" y="${cy-tl*0.28}" width="${gauge}" height="${tl*0.56}" fill="#144170" opacity=".85"/>
+    <path d="M${cx},${cy} L${px},${py}" stroke="#144170" stroke-width="3"/><path d="M${cx},${cy} L${sx},${sy}" stroke="#144170" stroke-width="3" stroke-dasharray="6 4"/>
+    <path d="M${pos(Math.min(num(p.pickR),num(p.setR))*0.5,0).join(",")} A${Math.min(num(p.pickR),num(p.setR))*0.5*k},${Math.min(num(p.pickR),num(p.setR))*0.5*k} 0 ${num(p.slewDeg)>180?1:0} 1 ${pos(Math.min(num(p.pickR),num(p.setR))*0.5,num(p.slewDeg)).join(",")}" fill="none" stroke="#a8502a" stroke-width="1"/>
+    <rect x="${px-lw/2}" y="${py-lh/2}" width="${lw}" height="${lh}" fill="#b5d9fd" stroke="#144170"/><text x="${px}" y="${py-lh/2-4}" text-anchor="middle" fill="#1d1f20" font-weight="600">PICK ${fmt(num(p.pickR))} m</text>
+    <rect x="${sx-lw/2}" y="${sy-lh/2}" width="${lw}" height="${lh}" fill="none" stroke="#144170" stroke-dasharray="4 3"/><text x="${sx}" y="${sy+lh/2+11}" text-anchor="middle" fill="#1d1f20" font-weight="600">SET ${fmt(num(p.setR))} m</text>
+    <text x="6" y="${H-6}" fill="#7a7a7d">Plan · slew ${fmt(num(p.slewDeg),0)}° · rings in metres</text></svg>`}
+function sketchElev(p,R){const W=360,H=300,c=R.chart,g=R.geom;const Rg=R.govR;const L=g&&g.L||(c?c.booms[R.bi]:20);
+  const tipH=g&&!g.unreach?g.tipH:L*0.8;const spanX=Math.max(Rg+6,L*0.6+6),spanY=Math.max(tipH+4,10);const k=Math.min((W-40)/spanX,(H-40)/spanY);
+  const gx=20,gy=H-20;const X=x=>gx+x*k,Y=y=>gy-y*k;const pivX=c?num(c.pivotX):1,pivH=c?num(c.pivotH):2;
+  const dx=Rg-pivX,ok=g&&!g.unreach;const tx=ok?Rg:pivX+L*0.6,ty=ok?tipH:pivH+L*0.8;
+  const hookY=ok?Math.max(0,num(p.setLevel)+num(p.loadH)+num(p.rigH)):ty-2;const loadTop=num(p.setLevel)+num(p.loadH),loadH=Math.max(num(p.loadH),0.5),loadL=Math.max(num(p.loadL),1);
+  const od=num(p.obstD),oh=num(p.obstH);
+  return `<svg class="sketch" viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg" font-family="Barlow,Arial,sans-serif" font-size="10">
+    <line x1="0" y1="${gy}" x2="${W}" y2="${gy}" stroke="#1d1f20"/>
+    <rect x="${X(-(c&&c.trackLen||7)/2)}" y="${Y(1.1)}" width="${(c&&c.trackLen||7)*k}" height="${1.1*k}" fill="#5980a6" opacity=".6"/><rect x="${X(-2.2)}" y="${Y(pivH+0.6)}" width="${4.6*k}" height="${(pivH-0.5)*k}" fill="#144170" opacity=".85"/>
+    <line x1="${X(-pivX)}" y1="${Y(pivH)}" x2="${X(tx)}" y2="${Y(ty)}" stroke="#144170" stroke-width="5" stroke-linecap="round"/>
+    ${ok?`<line x1="${X(Rg)}" y1="${Y(ty)}" x2="${X(Rg)}" y2="${Y(hookY)}" stroke="#1d1f20" stroke-width="1"/><rect x="${X(Rg-loadL/2)}" y="${Y(loadTop)}" width="${loadL*k}" height="${loadH*k}" fill="#b5d9fd" stroke="#144170"/>
+      ${num(p.setLevel)>0?`<rect x="${X(Rg-loadL/2-1)}" y="${Y(num(p.setLevel))}" width="${(loadL+2)*k}" height="${num(p.setLevel)*k}" fill="#d4d4d7" stroke="#7a7a7d"/>`:""}`:`<text x="${X(tx)}" y="${Y(ty)-6}" fill="#a8502a" font-weight="600">boom too short</text>`}
+    ${od>0&&oh>0?`<rect x="${X(od)-3}" y="${Y(oh)}" width="6" height="${oh*k}" fill="#a8502a" opacity=".8"/><text x="${X(od)+6}" y="${Y(oh)-3}" fill="#a8502a">obstacle ${fmt(oh)} m</text>`:""}
+    <line x1="${X(0)}" y1="${gy+10}" x2="${X(Rg)}" y2="${gy+10}" stroke="#7a7a7d" stroke-width=".7"/><text x="${X(Rg/2)}" y="${gy+18}" text-anchor="middle" fill="#7a7a7d">R = ${fmt(Rg)} m</text>
+    <text x="${X(tx)+4}" y="${Y(ty)+3}" fill="#1d1f20" font-weight="600">${fmt(L)} m boom${ok?` · ${fmt(g.angle,0)}°`:""}</text>
+    <text x="6" y="12" fill="#7a7a7d">Elevation · governing radius</text></svg>`}
+
+/* ── printed plan ── */
+function sheetHTML(p){const R=calc(p),c=R.chart,m=R.model,g=R.geom,gr=R.ground,st=S.settings;
+  const dl=rows=>`<dl>${rows.filter(r=>r).map(([k,v])=>`<dt>${esc(k)}</dt><dd>${v==null||v===""?"–":v}</dd>`).join("")}</dl>`;
+  const verdict=R.fails.length?["NOT PERMITTED AS PLANNED","crit"]:R.critical?["CRITICAL LIFT","crit"]:["STANDARD LIFT","ok"];
+  return `<div class="sheet">
+    <div class="head"><div><div class="kicker">${esc([st.company,st.project].filter(Boolean).join(" · "))}</div><h1>Lift plan ${esc(p.liftNo||"")}</h1><div>${esc(planName(p))}</div></div>
+      <div style="text-align:right"><div class="kicker">Date / time</div><div><b>${esc(p.date||"–")}</b> ${esc(p.time||"")}</div><div class="kicker" style="margin-top:6px">Crane</div><div><b>Sennebogen ${esc(m.name)}</b></div></div></div>
+    ${c&&c.demo?`<div class="banner">DEMO CHART – the capacities below are fictitious. Replace with the rating book for the machine before use.</div>`:""}
+    <div class="verdict ${verdict[1]}"><span class="big">${verdict[0]}</span><span>Gross load <b>${fmt(R.gross,2)} t</b> · rated <b>${R.cap?fmt(R.cap,2)+" t":"–"}</b> at ${fmt(R.gov.chartR||R.govR)} m · utilisation <b>${R.pct!=null?fmt(R.pct,0)+"%":"–"}</b></span>${R.critical?`<span class="small">${esc(R.reasons.join("; "))}</span>`:""}</div>
+    ${R.fails.length?`<div class="box" style="border-color:#a8502a;color:#a8502a;margin-top:8px">${R.fails.map(f=>`<div>✕ ${esc(f)}</div>`).join("")}</div>`:""}
+    ${R.warnings.length?`<div class="box" style="margin-top:8px;font-size:11.5px">${R.warnings.map(w=>`<div>△ ${esc(w)}</div>`).join("")}</div>`:""}
+    <h2>1 · Lift details</h2><div class="cols">
+      ${dl([["Location",esc(p.location)],["Description",esc(p.description)],["Permit / notification",esc(p.permitNo)],["Weight source",esc({verified:"Verified",calculated:"Calculated from drawings",estimated:"Estimated"}[p.loadSource]||p.loadSource)]])}
+      ${dl([["Lift supervisor",esc(p.liftSupervisor)],["Crane operator",esc(p.operator)],["Dogman / rigger",esc(p.dogman)],["Prepared by",esc(p.preparedBy)]])}</div>
+    <h2>2 · Crane and configuration</h2><div class="cols">
+      ${dl([["Crane",`Sennebogen ${esc(m.name)}`],["Chart",c?esc(c.name):"–"],["Configuration",c?esc(c.cfg||"–"):"–"],["Counterweight",c&&c.cwt?fmt(c.cwt)+" t":"–"],["Boom length",R.boom?fmt(R.boom)+" m":"–"],["Chart source",c?esc(c.source||"–"):"–"]])}
+      ${dl([["Pick radius",fmt(num(p.pickR))+" m"],["Set radius",fmt(num(p.setR))+" m"],["Slew",fmt(num(p.slewDeg),0)+"°"],g&&!g.unreach?["Boom angle",fmt(g.angle,0)+"°"]:null,R.maxWind?["Max wind (book)",fmt(R.maxWind)+" m/s"]:null,["Hook block",c?fmt(num(c.hookMass),2)+" t"+(c.includesHook?" (in chart)":" (added)"):"–"]])}</div>
+    <h2>3 · Load and rigging</h2><div class="cols">
+      <table><tbody><tr><td>Load${num(p.loadL)>0&&num(p.loadW)>0&&num(p.loadH)>0?` (${[p.loadL,p.loadW,p.loadH].map(v=>fmt(num(v))).join(" × ")} m)`:""}</td><td class="n">${fmt(num(p.loadMass),2)} t</td></tr><tr><td>Allowance ${fmt(num(p.allowPct),0)}%</td><td class="n">${fmt(R.allow,2)} t</td></tr>
+        ${(p.rig||[]).map(r=>`<tr><td>${esc(r.name)}${num(r.qty)>1?" × "+num(r.qty):""}${num(r.wll)?` · WLL ${fmt(num(r.wll),1)} t`:""}</td><td class="n">${fmt(num(r.mass)*Math.max(1,num(r.qty)||1),2)} t</td></tr>`).join("")}
+        <tr><td>Hook block</td><td class="n">${R.hookCounted?fmt(R.hookMass,2)+" t":"in chart"}</td></tr><tr style="font-weight:600;border-top:1px solid #1d1f20"><td>Gross load</td><td class="n">${fmt(R.gross,2)} t</td></tr></tbody></table>
+      ${dl([["Centre of gravity",esc(p.cog)],["Sling legs",`${R.sling.legs} at ${fmt(R.sling.ang,0)}° to vertical (${R.sling.eff} carrying)`],["Tension per leg",fmt(R.sling.tension,2)+" t"],["Lowest gear WLL",R.sling.minWll?fmt(R.sling.minWll,2)+" t":"–"],["Rigging height",fmt(num(p.rigH))+" m"]])}</div>
+    <h2>4 · Capacity check</h2>
+    <table><thead><tr><th>Position</th><th class="n">Radius</th><th class="n">Chart radius</th><th class="n">Rated</th><th class="n">Gross</th><th class="n">Utilisation</th><th>Result</th></tr></thead><tbody>
+      ${[["Pick",R.pick],["Set",R.set]].map(([n,x])=>`<tr><td>${n}</td><td class="n">${fmt(x.R)} m</td><td class="n">${x.cap?fmt(x.chartR)+" m":"–"}</td><td class="n">${x.cap?fmt(x.cap,2)+" t":"<span class='warn'>"+esc(x.why||"–")+"</span>"}</td><td class="n">${fmt(R.gross,2)} t</td><td class="n">${x.cap?fmt(R.gross/x.cap*100,0)+"%":"–"}</td><td>${x.cap?(R.gross>x.cap?"<b class='warn'>EXCEEDS</b>":R.gross/x.cap*100>=R.critPct?"OK – critical":"OK"):"<b class='warn'>NO RATING</b>"}</td></tr>`).join("")}</tbody></table>
+    <p class="small" style="color:#5d5d60">Rated capacity read from the chart at the next tabulated radius at or beyond the working radius, ${R.boom?fmt(R.boom)+" m":""} boom. Critical lift threshold ${R.critPct}% of rated. The crane's load moment indicator and rating book govern on the day.</p>
+    <div class="cols3">
+      <div class="box"><b>Height</b>${g&&!g.unreach?dl([["Tip height",fmt(g.tipH)+" m"],["Hook available",fmt(g.hookAvail)+" m"],["Hook needed",fmt(g.hookReq)+" m"],["Result",g.hookOK?"OK":"<b class='warn'>SHORT</b>"]]):"<div class='small'>Not checked – no pivot geometry on the chart.</div>"}</div>
+      <div class="box"><b>Boom clearance</b>${g&&g.obstClear!=null?dl([["Obstacle",`${fmt(num(p.obstH))} m high at ${fmt(num(p.obstD))} m`],["Boom height there",fmt(g.boomAtObst)+" m"],["Clearance",fmt(g.obstClear,2)+" m"],["Result",g.obstClear>=num(st.minClear)?"OK":"<b class='warn'>TOO CLOSE</b>"]]):"<div class='small'>No obstacle entered.</div>"}</div>
+      <div class="box"><b>Ground bearing</b>${gr?dl([["Crane + load",fmt(gr.total,1)+" t"],gr.avg!=null?["Average on tracks",fmt(gr.avg,0)+" kPa"]:null,gr.matAvg!=null?["Average on mats",fmt(gr.matAvg,0)+" kPa"]:null,gr.design!=null?["One track loaded",fmt(gr.design,0)+" kPa"]:null,["Allowable",gr.allow?fmt(gr.allow,0)+" kPa":"–"],["Result",gr.ok==null?"not checked":gr.ok?"OK":"<b class='warn'>EXCEEDS</b>"]]):"<div class='small'>No operating weight entered.</div>"}</div></div>
+    <div class="keep"><h2>5 · Sketch</h2><div class="cols">${sketchPlan(p,R)}${sketchElev(p,R)}</div></div>
+    <div class="keep"><h2>6 · Hazards and controls</h2>
+    ${R.flagHits.length?`<div class="box" style="margin-bottom:6px"><b>Critical lift factors:</b> ${esc(R.flagHits.join("; "))}</div>`:""}
+    ${p.hazards?`<div style="white-space:pre-wrap;margin-bottom:6px">${esc(p.hazards)}</div>`:""}
+    <div class="chk">${CHECKS.map(([k,l])=>`<div><i class="${p.checks&&p.checks[k]?"on":""}"></i>${esc(l)}</div>`).join("")}</div>
+    ${p.notes?`<p style="white-space:pre-wrap"><b>Notes:</b> ${esc(p.notes)}</p>`:""}</div>
+    <div class="keep"><h2>7 · Sign-off</h2>
+    <div class="sign"><div><b>Prepared by</b>${esc(p.preparedBy)}<br>Signature / date</div><div><b>Crane operator</b>${esc(p.operator)}<br>Signature / date</div><div><b>Dogman / rigger</b>${esc(p.dogman)}<br>Signature / date</div><div><b>Lift supervisor</b>${esc(p.liftSupervisor)}<br>Signature / date</div><div><b>${esc(st.company||"Contractor")} approval</b><br>Signature / date</div><div><b>Principal contractor review${R.critical?" (required – critical lift)":""}</b><br>Signature / date</div></div>
+    </div><div class="foot">Prepared with the lift planner on ${esc(new Date().toLocaleString("en-AU"))}. Lift to be re-planned if the load, crane configuration, radius, ground or weather differ from this sheet. All lifts to be carried out by licensed personnel in accordance with the rating book, the site's crane procedures and AS 2550.1 / AS 2550.5.</div>
+  </div>`}
+function tabDoc(){const p=plan();$("#body").innerHTML="";$("#sheet").innerHTML=`<div class="wrap noprint" style="padding-bottom:0"><div class="row" style="padding:12px 0"><button class="btn primary bp" id="printBtn">${BP}Print / save as PDF</button><button class="btn" id="backBtn">← Back to editing</button><span class="small muted">A4, two pages. In the print dialog choose “Save as PDF”.</span></div></div>${sheetHTML(p)}`}
+
+/* ── events ── */
+document.addEventListener("input",e=>{const t=e.target,p=plan();
+  if(t.dataset.k!==undefined){const k=t.dataset.k;p[k]=t.type==="checkbox"?t.checked:t.type==="number"?(t.value===""?"":num(t.value)):t.value;
+    if(k==="model"){const ch=S.charts.find(x=>x.model===p.model);p.chartId=ch?ch.id:"";p.boom=null;save();render();return}
+    if(k==="chartId"){p.boom=null;save();render();return}
+    save();if(t.type==="number"||t.type==="checkbox"||t.tagName==="SELECT"){rerenderKeepingFocus();return}
+    if(k==="title"||k==="description")$("#planTitle").textContent=planName(p);renderStrip();return}
+  if(t.dataset.set!==undefined){S.settings[t.dataset.set]=t.type==="number"?num(t.value):t.value;save();renderStrip();return}
+  if(t.dataset.flag){p.flags=p.flags||{};p.flags[t.dataset.flag]=t.checked;save();renderStrip();return}
+  if(t.dataset.check){p.checks=p.checks||{};p.checks[t.dataset.check]=t.checked;save();return}
+  if(t.dataset.rig!==undefined){const r=p.rig[+t.dataset.rig];if(r){r[t.dataset.rk]=t.type==="number"?num(t.value):t.value;save();if(t.dataset.rk!=="name")rerenderKeepingFocus();else renderStrip()}return}
+  if(t.dataset.c!==undefined&&S.editChart){const k=t.dataset.c;S.editChart[k]=k==="includesHook"?t.value==="1":t.type==="number"?(t.value===""?"":num(t.value)):t.value;return}});
+/* Re-render the tab (results change with every field) but keep the field being typed in as it was,
+   so a half-typed decimal isn't flattened mid-keystroke and focus stays put. */
+function rerenderKeepingFocus(){const a=document.activeElement,key=x=>x.dataset.k||(x.dataset.rig!==undefined?"rig"+x.dataset.rig+x.dataset.rk:null),id=a&&key(a),raw=a&&a.value;render();
+  if(id){const el=$$("input,select").find(x=>key(x)===id);if(el){if(el.type==="number"&&el.value!==raw)el.value=raw;el.focus()}}}
+document.addEventListener("change",e=>{if(e.target.id==="planSel"){S.planId=e.target.value;save();render()}
+  if(e.target.id==="importAll"){const f=e.target.files[0];if(!f)return;f.text().then(txt=>{const d=JSON.parse(txt);if(!d||(!Array.isArray(d.plans)&&!Array.isArray(d.charts)))throw new Error("bad");
+    (d.charts||[]).forEach(c=>{if(c&&c.id&&c.booms){const i=S.charts.findIndex(x=>x.id===c.id);if(i>=0)S.charts[i]=c;else S.charts.push(c)}});
+    (d.plans||[]).forEach(p=>{if(p&&p.id){const i=S.plans.findIndex(x=>x.id===p.id);if(i>=0)S.plans[i]=p;else S.plans.push(p)}});
+    if(d.settings)S.settings={...S.settings,...d.settings};save();render();toast(`Imported ${(d.plans||[]).length} plans and ${(d.charts||[]).length} charts`)}).catch(()=>toast("That file isn't a lift planner export"));e.target.value=""}});
+document.addEventListener("click",e=>{const t=e.target.closest("button,[data-tab]");if(!t)return;const p=plan();
+  if(t.dataset.tab){S.tab=t.dataset.tab;S.editChart=null;render();window.scrollTo(0,0);return}
+  switch(t.id){
+    case "newPlan":{const n=newPlan();S.plans.push(n);S.planId=n.id;S.tab="lift";save();render();return}
+    case "dupPlan":{const n={...JSON.parse(JSON.stringify(p)),id:uid(),createdAt:Date.now(),title:(p.title||planName(p))+" (copy)",checks:{}};S.plans.push(n);S.planId=n.id;save();render();toast("Duplicated");return}
+    case "delPlan":{if(!confirm(`Delete “${planName(p)}”?`))return;S.plans=S.plans.filter(x=>x.id!==p.id);S.planId=null;save();render();return}
+    case "openEditor":{S.editChart=S.editChart?null:{id:uid(),model:p.model,includesHook:false,hookMass:"",hookLen:2,grid:""};render();if(S.editChart)$("#chartEditor").scrollIntoView({behavior:"smooth"});return}
+    case "cancelChart":{S.editChart=null;render();return}
+    case "saveChart":{const c=S.editChart;try{const g=parseGrid(c.grid||"");const out={...c,...g};delete out.grid;if(!out.name)out.name=`${modelOf(out.model).name} – ${out.cfg||g.booms.join("/")+" m"}`;
+        ["cwt","hookMass","hookLen","pivotH","pivotX","opWeight","trackLen","shoeW","maxWind"].forEach(k=>out[k]=num(out[k]));out.demo=false;
+        const i=S.charts.findIndex(x=>x.id===out.id);if(i>=0)S.charts[i]=out;else S.charts.push(out);p.model=out.model;p.chartId=out.id;p.boom=null;S.editChart=null;save();render();toast("Chart saved")}catch(err){toast(err.message)}return}
+    case "rigAdd":{p.rig=p.rig||[];p.rig.push({name:"",mass:0,wll:"",qty:1});save();render();return}
+    case "exportAll":{const blob=new Blob([JSON.stringify({plans:S.plans,charts:S.charts,settings:S.settings,exportedAt:new Date().toISOString()},null,1)],{type:"application/json"});const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download=`lift-planner-${today()}.json`;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),2000);return}
+    case "printBtn":{window.print();return}
+    case "backBtn":{S.tab="check";render();return}}
+  if(t.dataset.rigdel!==undefined){p.rig.splice(+t.dataset.rigdel,1);save();render();return}
+  if(t.dataset.editchart){const c=chartOf(t.dataset.editchart);if(!c)return;S.editChart={...c,grid:gridText(c)};render();$("#chartEditor").scrollIntoView({behavior:"smooth"});return}
+  if(t.dataset.dupchart){const c=chartOf(t.dataset.dupchart);if(!c)return;S.editChart={...c,id:uid(),demo:false,name:c.demo?"":c.name+" (copy)",source:c.demo?"":c.source,grid:gridText(c)};render();$("#chartEditor").scrollIntoView({behavior:"smooth"});return}
+  if(t.dataset.delchart){if(!confirm("Delete this chart?"))return;S.charts=S.charts.filter(x=>x.id!==t.dataset.delchart);S.plans.forEach(x=>{if(x.chartId===t.dataset.delchart)x.chartId=""});save();render();return}});
+window.addEventListener("beforeprint",()=>{if(S.tab!=="doc"){$("#sheet").innerHTML=sheetHTML(plan())}});
+render();
+</script>
+</body>
+</html>
